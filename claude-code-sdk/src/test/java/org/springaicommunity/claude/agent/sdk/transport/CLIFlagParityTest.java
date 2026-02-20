@@ -35,14 +35,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * CLI Flag Parity Tests - Ensures Java SDK passes all CLI flags that Python SDK supports.
  *
- * <p>IMPORTANT: This test class exists to prevent regressions where CLI flags are missing
- * or incorrectly passed. Two bugs were caught in tutorials due to missing flag support:</p>
+ * <p>
+ * IMPORTANT: This test class exists to prevent regressions where CLI flags are missing or
+ * incorrectly passed. Two bugs were caught in tutorials due to missing flag support:
+ * </p>
  * <ul>
- *   <li>Module 09: --json-schema flag parsing was broken (structured_output not parsed)</li>
- *   <li>Module 11: --resume flag was completely missing from the SDK</li>
+ * <li>Module 09: --json-schema flag parsing was broken (structured_output not
+ * parsed)</li>
+ * <li>Module 11: --resume flag was completely missing from the SDK</li>
  * </ul>
  *
- * <p>Reference: Python SDK subprocess_cli.py _build_command() method</p>
+ * <p>
+ * Reference: Python SDK subprocess_cli.py _build_command() method
+ * </p>
  *
  * @see <a href="https://github.com/anthropics/claude-agent-sdk-python">Python SDK</a>
  */
@@ -108,9 +113,7 @@ class CLIFlagParityTest {
 		@DisplayName("--model flag with model ID")
 		void modelFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.model("claude-sonnet-4-5-20250929")
-					.build();
+				CLIOptions options = CLIOptions.builder().model("claude-sonnet-4-5-20250929").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--model", "claude-sonnet-4-5-20250929");
 			}
@@ -120,9 +123,7 @@ class CLIFlagParityTest {
 		@DisplayName("--system-prompt flag with custom prompt")
 		void systemPromptFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.systemPrompt("You are a helpful assistant")
-					.build();
+				CLIOptions options = CLIOptions.builder().systemPrompt("You are a helpful assistant").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--system-prompt", "You are a helpful assistant");
 			}
@@ -132,9 +133,7 @@ class CLIFlagParityTest {
 		@DisplayName("--append-system-prompt flag")
 		void appendSystemPromptFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.appendSystemPrompt("Always be concise.")
-					.build();
+				CLIOptions options = CLIOptions.builder().appendSystemPrompt("Always be concise.").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--append-system-prompt", "Always be concise.");
 			}
@@ -144,9 +143,7 @@ class CLIFlagParityTest {
 		@DisplayName("--fallback-model flag")
 		void fallbackModelFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.fallbackModel("claude-haiku-4-5-20251001")
-					.build();
+				CLIOptions options = CLIOptions.builder().fallbackModel("claude-haiku-4-5-20251001").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--fallback-model", "claude-haiku-4-5-20251001");
 			}
@@ -166,9 +163,7 @@ class CLIFlagParityTest {
 		@DisplayName("--allowedTools flag with comma-separated list")
 		void allowedToolsFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.allowedTools(List.of("Bash", "Read", "Write"))
-					.build();
+				CLIOptions options = CLIOptions.builder().allowedTools(List.of("Bash", "Read", "Write")).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--allowedTools", "Bash,Read,Write");
 			}
@@ -178,9 +173,7 @@ class CLIFlagParityTest {
 		@DisplayName("--disallowedTools flag with comma-separated list")
 		void disallowedToolsFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.disallowedTools(List.of("WebFetch", "WebSearch"))
-					.build();
+				CLIOptions options = CLIOptions.builder().disallowedTools(List.of("WebFetch", "WebSearch")).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--disallowedTools", "WebFetch,WebSearch");
 			}
@@ -190,9 +183,7 @@ class CLIFlagParityTest {
 		@DisplayName("--tools flag with base tool set")
 		void toolsFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.tools(List.of("Read", "Edit"))
-					.build();
+				CLIOptions options = CLIOptions.builder().tools(List.of("Read", "Edit")).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--tools", "Read,Edit");
 			}
@@ -202,9 +193,7 @@ class CLIFlagParityTest {
 		@DisplayName("--tools flag with empty list disables all tools")
 		void toolsFlagEmpty() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.tools(List.of())
-					.build();
+				CLIOptions options = CLIOptions.builder().tools(List.of()).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				int toolsIndex = cmd.indexOf("--tools");
 				assertThat(toolsIndex).isGreaterThan(-1);
@@ -226,9 +215,7 @@ class CLIFlagParityTest {
 		@DisplayName("--permission-mode bypassPermissions")
 		void permissionModeBypass() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.permissionMode(PermissionMode.BYPASS_PERMISSIONS)
-					.build();
+				CLIOptions options = CLIOptions.builder().permissionMode(PermissionMode.BYPASS_PERMISSIONS).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--permission-mode", "bypassPermissions");
 			}
@@ -252,9 +239,7 @@ class CLIFlagParityTest {
 		@DisplayName("--permission-prompt-tool flag")
 		void permissionPromptToolFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.permissionPromptToolName("stdio")
-					.build();
+				CLIOptions options = CLIOptions.builder().permissionPromptToolName("stdio").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--permission-prompt-tool", "stdio");
 			}
@@ -274,9 +259,7 @@ class CLIFlagParityTest {
 		@DisplayName("--continue flag for continuing most recent session")
 		void continueFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.continueConversation(true)
-					.build();
+				CLIOptions options = CLIOptions.builder().continueConversation(true).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).contains("--continue");
 			}
@@ -286,9 +269,7 @@ class CLIFlagParityTest {
 		@DisplayName("--resume flag with session ID")
 		void resumeFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.resume("session-abc123")
-					.build();
+				CLIOptions options = CLIOptions.builder().resume("session-abc123").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--resume", "session-abc123");
 			}
@@ -308,9 +289,7 @@ class CLIFlagParityTest {
 		@DisplayName("--continue flag not present when false")
 		void continueFlagNotPresentWhenFalse() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.continueConversation(false)
-					.build();
+				CLIOptions options = CLIOptions.builder().continueConversation(false).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).doesNotContain("--continue");
 			}
@@ -330,9 +309,7 @@ class CLIFlagParityTest {
 		@DisplayName("--max-turns flag")
 		void maxTurnsFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.maxTurns(10)
-					.build();
+				CLIOptions options = CLIOptions.builder().maxTurns(10).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--max-turns", "10");
 			}
@@ -342,9 +319,7 @@ class CLIFlagParityTest {
 		@DisplayName("--max-budget-usd flag")
 		void maxBudgetUsdFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.maxBudgetUsd(0.50)
-					.build();
+				CLIOptions options = CLIOptions.builder().maxBudgetUsd(0.50).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--max-budget-usd", "0.5");
 			}
@@ -364,9 +339,7 @@ class CLIFlagParityTest {
 		@DisplayName("--max-thinking-tokens flag")
 		void maxThinkingTokensFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.maxThinkingTokens(10000)
-					.build();
+				CLIOptions options = CLIOptions.builder().maxThinkingTokens(10000).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--max-thinking-tokens", "10000");
 			}
@@ -388,15 +361,11 @@ class CLIFlagParityTest {
 			try (StreamingTransport transport = createTransport()) {
 				Map<String, Object> schema = new HashMap<>();
 				schema.put("type", "object");
-				schema.put("properties", Map.of(
-					"answer", Map.of("type", "number"),
-					"explanation", Map.of("type", "string")
-				));
+				schema.put("properties",
+						Map.of("answer", Map.of("type", "number"), "explanation", Map.of("type", "string")));
 				schema.put("required", List.of("answer", "explanation"));
 
-				CLIOptions options = CLIOptions.builder()
-					.jsonSchema(schema)
-					.build();
+				CLIOptions options = CLIOptions.builder().jsonSchema(schema).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 
 				int schemaIndex = cmd.indexOf("--json-schema");
@@ -423,17 +392,15 @@ class CLIFlagParityTest {
 		void agentsFlag() {
 			try (StreamingTransport transport = createTransport()) {
 				String agentsJson = """
-					{
-						"researcher": {
-							"description": "Research agent",
-							"tools": ["WebSearch"],
-							"prompt": "You are a researcher"
+						{
+							"researcher": {
+								"description": "Research agent",
+								"tools": ["WebSearch"],
+								"prompt": "You are a researcher"
+							}
 						}
-					}
-					""";
-				CLIOptions options = CLIOptions.builder()
-					.agents(agentsJson)
-					.build();
+						""";
+				CLIOptions options = CLIOptions.builder().agents(agentsJson).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).contains("--agents");
 				int agentsIndex = cmd.indexOf("--agents");
@@ -445,9 +412,7 @@ class CLIFlagParityTest {
 		@DisplayName("--agents flag not present when empty")
 		void agentsFlagNotPresentWhenEmpty() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.agents("")
-					.build();
+				CLIOptions options = CLIOptions.builder().agents("").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).doesNotContain("--agents");
 			}
@@ -464,19 +429,20 @@ class CLIFlagParityTest {
 	class McpServerFlags {
 
 		@Test
-		@DisplayName("--mcp-config flag with stdio server")
-		void mcpConfigStdioServer() {
+		@DisplayName("--mcp-config flag with stdio server writes temp file")
+		void mcpConfigStdioServer() throws Exception {
 			try (StreamingTransport transport = createTransport()) {
-				McpServerConfig.McpStdioServerConfig stdioServer = new McpServerConfig.McpStdioServerConfig(
-					"npx", List.of("-y", "@modelcontextprotocol/server-filesystem"), null
-				);
-				CLIOptions options = CLIOptions.builder()
-					.mcpServers(Map.of("filesystem", stdioServer))
-					.build();
+				McpServerConfig.McpStdioServerConfig stdioServer = new McpServerConfig.McpStdioServerConfig("npx",
+						List.of("-y", "@modelcontextprotocol/server-filesystem"), null);
+				CLIOptions options = CLIOptions.builder().mcpServers(Map.of("filesystem", stdioServer)).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).contains("--mcp-config");
 				int mcpIndex = cmd.indexOf("--mcp-config");
-				String mcpJson = cmd.get(mcpIndex + 1);
+				String mcpConfigPath = cmd.get(mcpIndex + 1);
+				// Value should be a temp file path, not inline JSON
+				Path mcpFile = Path.of(mcpConfigPath);
+				assertThat(mcpFile).exists();
+				String mcpJson = java.nio.file.Files.readString(mcpFile);
 				assertThat(mcpJson).contains("mcpServers");
 				assertThat(mcpJson).contains("filesystem");
 			}
@@ -496,9 +462,7 @@ class CLIFlagParityTest {
 		@DisplayName("--settings flag with file path")
 		void settingsFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.settings("/etc/claude/settings.json")
-					.build();
+				CLIOptions options = CLIOptions.builder().settings("/etc/claude/settings.json").build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--settings", "/etc/claude/settings.json");
 			}
@@ -508,9 +472,7 @@ class CLIFlagParityTest {
 		@DisplayName("--setting-sources flag")
 		void settingSourcesFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.settingSources(List.of("project", "user"))
-					.build();
+				CLIOptions options = CLIOptions.builder().settingSources(List.of("project", "user")).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--setting-sources", "project,user");
 			}
@@ -574,9 +536,7 @@ class CLIFlagParityTest {
 		@DisplayName("Extra args with value")
 		void extraArgsWithValue() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.extraArgs(Map.of("custom-flag", "custom-value"))
-					.build();
+				CLIOptions options = CLIOptions.builder().extraArgs(Map.of("custom-flag", "custom-value")).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--custom-flag", "custom-value");
 			}
@@ -588,9 +548,7 @@ class CLIFlagParityTest {
 			try (StreamingTransport transport = createTransport()) {
 				Map<String, String> extraArgs = new HashMap<>();
 				extraArgs.put("debug-to-stderr", null);
-				CLIOptions options = CLIOptions.builder()
-					.extraArgs(extraArgs)
-					.build();
+				CLIOptions options = CLIOptions.builder().extraArgs(extraArgs).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).contains("--debug-to-stderr");
 			}
@@ -610,9 +568,7 @@ class CLIFlagParityTest {
 		@DisplayName("--include-partial-messages flag when enabled")
 		void includePartialMessagesFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.includePartialMessages(true)
-					.build();
+				CLIOptions options = CLIOptions.builder().includePartialMessages(true).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).contains("--include-partial-messages");
 			}
@@ -622,9 +578,7 @@ class CLIFlagParityTest {
 		@DisplayName("--include-partial-messages flag not present when disabled")
 		void includePartialMessagesFlagNotPresent() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.includePartialMessages(false)
-					.build();
+				CLIOptions options = CLIOptions.builder().includePartialMessages(false).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).doesNotContain("--include-partial-messages");
 			}
@@ -634,9 +588,7 @@ class CLIFlagParityTest {
 		@DisplayName("--fork-session flag when enabled")
 		void forkSessionFlag() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.forkSession(true)
-					.build();
+				CLIOptions options = CLIOptions.builder().forkSession(true).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).contains("--fork-session");
 			}
@@ -646,9 +598,7 @@ class CLIFlagParityTest {
 		@DisplayName("--fork-session flag not present when disabled")
 		void forkSessionFlagNotPresent() {
 			try (StreamingTransport transport = createTransport()) {
-				CLIOptions options = CLIOptions.builder()
-					.forkSession(false)
-					.build();
+				CLIOptions options = CLIOptions.builder().forkSession(false).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).doesNotContain("--fork-session");
 			}
@@ -668,10 +618,8 @@ class CLIFlagParityTest {
 		@DisplayName("All major flags work together")
 		void allMajorFlagsTogether() {
 			try (StreamingTransport transport = createTransport()) {
-				Map<String, Object> schema = Map.of(
-					"type", "object",
-					"properties", Map.of("result", Map.of("type", "string"))
-				);
+				Map<String, Object> schema = Map.of("type", "object", "properties",
+						Map.of("result", Map.of("type", "string")));
 
 				CLIOptions options = CLIOptions.builder()
 					.model("claude-sonnet-4-5-20250929")

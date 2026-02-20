@@ -40,6 +40,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -54,8 +55,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- * Streaming transport for Claude CLI communication. Manages the subprocess lifecycle
- * and handles JSON message streaming via stdin/stdout.
+ * Streaming transport for Claude CLI communication. Manages the subprocess lifecycle and
+ * handles JSON message streaming via stdin/stdout.
  *
  * <p>
  * Key features:
@@ -125,6 +126,9 @@ public class StreamingTransport implements AutoCloseable {
 
 	/** Flag for clean shutdown - volatile for visibility across threads (MCP pattern) */
 	private volatile boolean isClosing = false;
+
+	/** Temp file for MCP config — written before session start, deleted on close. */
+	private volatile Path mcpConfigFile;
 
 	/** Stderr handler for the current session (may be null if using default logging). */
 	private volatile StderrHandler currentStderrHandler;
@@ -215,8 +219,10 @@ public class StreamingTransport implements AutoCloseable {
 			.fromExecutorService(Executors.newSingleThreadExecutor(r -> new Thread(r, "claude-error")), "error");
 
 		// Initialize sinks with backpressure
-		// Use replay() to buffer messages for late subscribers in multi-turn conversations
-		// This ensures messages aren't lost between turns when there's no active subscriber
+		// Use replay() to buffer messages for late subscribers in multi-turn
+		// conversations
+		// This ensures messages aren't lost between turns when there's no active
+		// subscriber
 		this.inboundSink = Sinks.many().replay().all();
 		this.outboundSink = Sinks.many().unicast().onBackpressureBuffer();
 		this.serverInfoSink = Sinks.one();
@@ -405,7 +411,8 @@ public class StreamingTransport implements AutoCloseable {
 		command.add("stream-json");
 		// NOTE: --permission-prompt-tool is NOT added unconditionally
 		// This matches Python SDK behavior where it's only added if explicitly configured
-		// Adding it unconditionally may affect how --allowedTools restrictions are enforced
+		// Adding it unconditionally may affect how --allowedTools restrictions are
+		// enforced
 		command.add("--verbose");
 
 		// Standard options
@@ -503,18 +510,21 @@ public class StreamingTransport implements AutoCloseable {
 			}
 		}
 
-		// Add MCP server configuration
+		// Add MCP server configuration via temp file (avoids shell escaping issues)
 		if (options.getMcpServers() != null && !options.getMcpServers().isEmpty()) {
 			try {
 				Map<String, Object> serversForCli = buildMcpConfigForCli(options.getMcpServers());
 				if (!serversForCli.isEmpty()) {
 					String mcpConfigJson = objectMapper.writeValueAsString(Map.of("mcpServers", serversForCli));
+					this.mcpConfigFile = Files.createTempFile("claude-mcp-", ".json");
+					Files.writeString(this.mcpConfigFile, mcpConfigJson);
 					command.add("--mcp-config");
-					command.add(mcpConfigJson);
+					command.add(this.mcpConfigFile.toString());
+					logger.debug("Wrote MCP config to temp file: {}", this.mcpConfigFile);
 				}
 			}
-			catch (JsonProcessingException e) {
-				logger.warn("Failed to serialize MCP config, skipping --mcp-config flag", e);
+			catch (IOException e) {
+				logger.warn("Failed to write MCP config file, skipping --mcp-config flag", e);
 			}
 		}
 
@@ -567,7 +577,8 @@ public class StreamingTransport implements AutoCloseable {
 		}
 
 		// Permission prompt tool - matches Python SDK auto-detection pattern
-		// Python SDK (client.py lines 68-69): Automatically sets permission_prompt_tool_name="stdio"
+		// Python SDK (client.py lines 68-69): Automatically sets
+		// permission_prompt_tool_name="stdio"
 		// when a can_use_tool callback is configured
 		String permissionPromptTool = options.getPermissionPromptToolName();
 		if (permissionPromptTool == null && options.getToolPermissionCallback() != null) {
@@ -785,9 +796,11 @@ public class StreamingTransport implements AutoCloseable {
 			// Log why loop ended
 			if (isClosing) {
 				logger.debug("Message processing loop ended: isClosing=true");
-			} else if (process != null && !process.isAlive()) {
+			}
+			else if (process != null && !process.isAlive()) {
 				logger.debug("Message processing loop ended: process exited with code {}", process.exitValue());
-			} else {
+			}
+			else {
 				logger.debug("Message processing loop ended: stdout closed");
 			}
 		}
@@ -1152,6 +1165,18 @@ public class StreamingTransport implements AutoCloseable {
 				Thread.currentThread().interrupt();
 				process.destroyForcibly();
 			}
+		}
+
+		// Clean up MCP config temp file
+		if (mcpConfigFile != null) {
+			try {
+				Files.deleteIfExists(mcpConfigFile);
+				logger.debug("Deleted MCP config temp file: {}", mcpConfigFile);
+			}
+			catch (IOException e) {
+				logger.debug("Failed to delete MCP config temp file: {}", mcpConfigFile, e);
+			}
+			mcpConfigFile = null;
 		}
 
 		// Shutdown schedulers
