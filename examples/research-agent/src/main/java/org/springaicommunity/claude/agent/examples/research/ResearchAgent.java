@@ -125,8 +125,8 @@ public class ResearchAgent {
 					.model(CLIOptions.MODEL_HAIKU)
 					.permissionMode(PermissionMode.BYPASS_PERMISSIONS)
 					.systemPrompt(leadAgentPrompt)
-					.tools(List.of("Task"))  // Base set of tools - only Task
-					.allowedTools(List.of("Task"))  // Filter to only Task
+					.tools(List.of("Task")) // Base set of tools - only Task
+					.allowedTools(List.of("Task")) // Filter to only Task
 					.settingSources(List.of("project"))
 					.agents(agentsJson)
 					.build();

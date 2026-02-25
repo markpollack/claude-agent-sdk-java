@@ -32,11 +32,15 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for MessageParser - verifies parsing of all message types including structured output.
+ * Tests for MessageParser - verifies parsing of all message types including structured
+ * output.
  *
- * <p>IMPORTANT: These tests exist because the MessageParser must parse ALL fields from CLI JSON.
- * A previous bug occurred when structured_output field was in the record but parser didn't set it.
- * For every field in a Message record, there MUST be a corresponding test here.</p>
+ * <p>
+ * IMPORTANT: These tests exist because the MessageParser must parse ALL fields from CLI
+ * JSON. A previous bug occurred when structured_output field was in the record but parser
+ * didn't set it. For every field in a Message record, there MUST be a corresponding test
+ * here.
+ * </p>
  */
 class MessageParserTest {
 
@@ -52,33 +56,33 @@ class MessageParserTest {
 	class ResultMessageParsing {
 
 		/**
-		 * FIELD PARITY TEST: Verifies ALL fields in ResultMessage record are parsed.
-		 * If you add a field to ResultMessage, you MUST add an assertion here.
+		 * FIELD PARITY TEST: Verifies ALL fields in ResultMessage record are parsed. If
+		 * you add a field to ResultMessage, you MUST add an assertion here.
 		 *
 		 * ResultMessage fields: subtype, durationMs, durationApiMs, isError, numTurns,
-		 *                       sessionId, totalCostUsd, usage, result, structuredOutput
+		 * sessionId, totalCostUsd, usage, result, structuredOutput
 		 */
 		@Test
 		@DisplayName("should parse ALL fields in ResultMessage (field parity test)")
 		void shouldParseAllResultMessageFields() throws Exception {
 			String json = """
-				{
-					"type": "result",
-					"subtype": "success",
-					"is_error": true,
-					"duration_ms": 1234,
-					"duration_api_ms": 5678,
-					"num_turns": 3,
-					"session_id": "sess-abc123",
-					"total_cost_usd": 0.0456,
-					"usage": {
-						"input_tokens": 100,
-						"output_tokens": 200
-					},
-					"result": "final result text",
-					"structured_output": {"key": "value"}
-				}
-				""";
+					{
+						"type": "result",
+						"subtype": "success",
+						"is_error": true,
+						"duration_ms": 1234,
+						"duration_api_ms": 5678,
+						"num_turns": 3,
+						"session_id": "sess-abc123",
+						"total_cost_usd": 0.0456,
+						"usage": {
+							"input_tokens": 100,
+							"output_tokens": 200
+						},
+						"result": "final result text",
+						"structured_output": {"key": "value"}
+					}
+					""";
 
 			Message message = parser.parseMessage(json);
 			assertThat(message).isInstanceOf(ResultMessage.class);
@@ -103,22 +107,22 @@ class MessageParserTest {
 		@DisplayName("should parse result message with structured_output")
 		void shouldParseResultWithStructuredOutput() throws Exception {
 			String json = """
-				{
-					"type": "result",
-					"subtype": "success",
-					"is_error": false,
-					"duration_ms": 1000,
-					"duration_api_ms": 800,
-					"num_turns": 2,
-					"session_id": "test-session",
-					"total_cost_usd": 0.01,
-					"result": "",
-					"structured_output": {
-						"answer": 4,
-						"explanation": "2 plus 2 equals 4"
+					{
+						"type": "result",
+						"subtype": "success",
+						"is_error": false,
+						"duration_ms": 1000,
+						"duration_api_ms": 800,
+						"num_turns": 2,
+						"session_id": "test-session",
+						"total_cost_usd": 0.01,
+						"result": "",
+						"structured_output": {
+							"answer": 4,
+							"explanation": "2 plus 2 equals 4"
+						}
 					}
-				}
-				""";
+					""";
 
 			Message message = parser.parseMessage(json);
 
@@ -136,22 +140,22 @@ class MessageParserTest {
 		@DisplayName("should parse result message with nested structured_output")
 		void shouldParseResultWithNestedStructuredOutput() throws Exception {
 			String json = """
-				{
-					"type": "result",
-					"subtype": "success",
-					"is_error": false,
-					"duration_ms": 1000,
-					"num_turns": 1,
-					"session_id": "test-session",
-					"total_cost_usd": 0.02,
-					"structured_output": {
-						"languages": [
-							{"name": "Java", "year": 1995},
-							{"name": "Python", "year": 1991}
-						]
+					{
+						"type": "result",
+						"subtype": "success",
+						"is_error": false,
+						"duration_ms": 1000,
+						"num_turns": 1,
+						"session_id": "test-session",
+						"total_cost_usd": 0.02,
+						"structured_output": {
+							"languages": [
+								{"name": "Java", "year": 1995},
+								{"name": "Python", "year": 1991}
+							]
+						}
 					}
-				}
-				""";
+					""";
 
 			Message message = parser.parseMessage(json);
 			ResultMessage result = (ResultMessage) message;
@@ -171,17 +175,17 @@ class MessageParserTest {
 		@DisplayName("should parse result message without structured_output")
 		void shouldParseResultWithoutStructuredOutput() throws Exception {
 			String json = """
-				{
-					"type": "result",
-					"subtype": "success",
-					"is_error": false,
-					"duration_ms": 500,
-					"num_turns": 1,
-					"session_id": "test-session",
-					"total_cost_usd": 0.005,
-					"result": "Some text result"
-				}
-				""";
+					{
+						"type": "result",
+						"subtype": "success",
+						"is_error": false,
+						"duration_ms": 500,
+						"num_turns": 1,
+						"session_id": "test-session",
+						"total_cost_usd": 0.005,
+						"result": "Some text result"
+					}
+					""";
 
 			Message message = parser.parseMessage(json);
 			ResultMessage result = (ResultMessage) message;
@@ -195,16 +199,16 @@ class MessageParserTest {
 		@DisplayName("should parse result message with null structured_output")
 		void shouldParseResultWithNullStructuredOutput() throws Exception {
 			String json = """
-				{
-					"type": "result",
-					"subtype": "success",
-					"is_error": false,
-					"duration_ms": 500,
-					"num_turns": 1,
-					"session_id": "test-session",
-					"structured_output": null
-				}
-				""";
+					{
+						"type": "result",
+						"subtype": "success",
+						"is_error": false,
+						"duration_ms": 500,
+						"num_turns": 1,
+						"session_id": "test-session",
+						"structured_output": null
+					}
+					""";
 
 			Message message = parser.parseMessage(json);
 			ResultMessage result = (ResultMessage) message;
@@ -212,6 +216,7 @@ class MessageParserTest {
 			assertThat(result.hasStructuredOutput()).isFalse();
 			assertThat(result.getStructuredOutputAsMap()).isNull();
 		}
+
 	}
 
 	@Nested
@@ -222,15 +227,15 @@ class MessageParserTest {
 		@DisplayName("should parse assistant message with text content block")
 		void shouldParseAssistantWithTextContent() throws Exception {
 			String json = """
-				{
-					"type": "assistant",
-					"message": {
-						"content": [
-							{"type": "text", "text": "Hello, world!"}
-						]
+					{
+						"type": "assistant",
+						"message": {
+							"content": [
+								{"type": "text", "text": "Hello, world!"}
+							]
+						}
 					}
-				}
-				""";
+					""";
 
 			Message message = parser.parseMessage(json);
 			assertThat(message).isInstanceOf(AssistantMessage.class);
@@ -245,20 +250,20 @@ class MessageParserTest {
 		@DisplayName("should parse assistant message with tool_use content block")
 		void shouldParseAssistantWithToolUse() throws Exception {
 			String json = """
-				{
-					"type": "assistant",
-					"message": {
-						"content": [
-							{
-								"type": "tool_use",
-								"id": "tool_123",
-								"name": "Read",
-								"input": {"file_path": "/tmp/test.txt"}
-							}
-						]
+					{
+						"type": "assistant",
+						"message": {
+							"content": [
+								{
+									"type": "tool_use",
+									"id": "tool_123",
+									"name": "Read",
+									"input": {"file_path": "/tmp/test.txt"}
+								}
+							]
+						}
 					}
-				}
-				""";
+					""";
 
 			Message message = parser.parseMessage(json);
 			AssistantMessage assistant = (AssistantMessage) message;
@@ -267,6 +272,7 @@ class MessageParserTest {
 			ContentBlock block = assistant.content().get(0);
 			assertThat(block.getType()).isEqualTo("tool_use");
 		}
+
 	}
 
 	@Nested
@@ -277,19 +283,19 @@ class MessageParserTest {
 		@DisplayName("should parse user message with tool_result content")
 		void shouldParseUserWithToolResult() throws Exception {
 			String json = """
-				{
-					"type": "user",
-					"message": {
-						"content": [
-							{
-								"type": "tool_result",
-								"tool_use_id": "tool_123",
-								"content": "file contents here"
-							}
-						]
+					{
+						"type": "user",
+						"message": {
+							"content": [
+								{
+									"type": "tool_result",
+									"tool_use_id": "tool_123",
+									"content": "file contents here"
+								}
+							]
+						}
 					}
-				}
-				""";
+					""";
 
 			Message message = parser.parseMessage(json);
 			assertThat(message).isInstanceOf(UserMessage.class);
@@ -297,6 +303,7 @@ class MessageParserTest {
 
 			assertThat(user.content()).isNotNull();
 		}
+
 	}
 
 }

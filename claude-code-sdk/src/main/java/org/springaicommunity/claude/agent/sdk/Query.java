@@ -32,13 +32,13 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Main entry point for one-shot Claude Code queries. Provides a simple, stateless API
- * for sending prompts and receiving responses.
+ * Main entry point for one-shot Claude Code queries. Provides a simple, stateless API for
+ * sending prompts and receiving responses.
  *
  * <p>
  * This class corresponds to the {@code query()} function in the Python SDK. For
- * multi-turn conversations, hooks, or MCP integration, use
- * {@link ClaudeSyncClient} or {@link ClaudeAsyncClient} instead.
+ * multi-turn conversations, hooks, or MCP integration, use {@link ClaudeSyncClient} or
+ * {@link ClaudeAsyncClient} instead.
  *
  * <h2>Quick Start</h2>
  *

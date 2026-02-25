@@ -32,8 +32,8 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for Research Agent components.
- * These tests verify the AgentDefinition and SubagentTracker without requiring the actual CLI.
+ * Unit tests for Research Agent components. These tests verify the AgentDefinition and
+ * SubagentTracker without requiring the actual CLI.
  */
 class ResearchAgentTest {
 
@@ -89,20 +89,20 @@ class ResearchAgentTest {
 		@Test
 		@DisplayName("Should serialize agents to JSON for CLI --agents parameter")
 		void serializeToJson() {
-			Map<String, AgentDefinition> agents = Map.of(
-				"researcher", AgentDefinition.builder()
-					.description("Research agent")
-					.tools("WebSearch", "Write")
-					.prompt("You are a researcher")
-					.model("haiku")
-					.build(),
-				"writer", AgentDefinition.builder()
-					.description("Report writer")
-					.tools("Read", "Write")
-					.prompt("You write reports")
-					.model("haiku")
-					.build()
-			);
+			Map<String, AgentDefinition> agents = Map.of("researcher",
+					AgentDefinition.builder()
+						.description("Research agent")
+						.tools("WebSearch", "Write")
+						.prompt("You are a researcher")
+						.model("haiku")
+						.build(),
+					"writer",
+					AgentDefinition.builder()
+						.description("Report writer")
+						.tools("Read", "Write")
+						.prompt("You write reports")
+						.model("haiku")
+						.build());
 
 			String json = AgentDefinition.toJson(agents);
 
@@ -132,7 +132,8 @@ class ResearchAgentTest {
 		void createSessionDirectory() throws IOException {
 			Path sessionDir = SubagentTracker.createSessionDir(tempDir);
 
-			// createSessionDir only returns the path, SubagentTracker constructor creates it
+			// createSessionDir only returns the path, SubagentTracker constructor creates
+			// it
 			assertThat(sessionDir.getFileName().toString()).startsWith("session_");
 			assertThat(sessionDir.getParent()).isEqualTo(tempDir);
 		}

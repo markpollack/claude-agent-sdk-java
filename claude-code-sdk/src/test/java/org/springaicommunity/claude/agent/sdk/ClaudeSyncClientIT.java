@@ -39,8 +39,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for ClaudeSyncClient with real Claude CLI.
  *
  * <p>
- * These tests verify the new ClaudeClient.sync() factory pattern works correctly with
- * the actual Claude CLI process.
+ * These tests verify the new ClaudeClient.sync() factory pattern works correctly with the
+ * actual Claude CLI process.
  * </p>
  */
 class ClaudeSyncClientIT extends ClaudeCliTestBase {
@@ -227,12 +227,8 @@ class ClaudeSyncClientIT extends ClaudeCliTestBase {
 	void shouldReturnStructuredOutputWithJsonSchema() {
 		// Given - define a schema for structured response
 		JsonSchema schema = JsonSchema.ofObject(
-			Map.of(
-				"answer", Map.of("type", "number"),
-				"explanation", Map.of("type", "string")
-			),
-			List.of("answer", "explanation")
-		);
+				Map.of("answer", Map.of("type", "number"), "explanation", Map.of("type", "string")),
+				List.of("answer", "explanation"));
 
 		CLIOptions options = CLIOptions.builder()
 			.model(HAIKU_MODEL)
@@ -264,9 +260,7 @@ class ClaudeSyncClientIT extends ClaudeCliTestBase {
 
 			// Verify structured output is present and correct
 			assertThat(resultMessage).isNotNull();
-			assertThat(resultMessage.hasStructuredOutput())
-				.as("ResultMessage should have structured output")
-				.isTrue();
+			assertThat(resultMessage.hasStructuredOutput()).as("ResultMessage should have structured output").isTrue();
 
 			Map<String, Object> output = resultMessage.getStructuredOutputAsMap();
 			assertThat(output).isNotNull();

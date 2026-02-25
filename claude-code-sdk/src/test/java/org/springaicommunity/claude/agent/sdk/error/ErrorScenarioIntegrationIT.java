@@ -63,8 +63,8 @@ class ErrorScenarioIntegrationIT extends ClaudeCliTestBase {
 
 		// When/Then - should throw meaningful exception
 		assertThatThrownBy(() -> {
-			try (StreamingTransport transport = new StreamingTransport(workingDirectory(),
-					Duration.ofMinutes(1), invalidPath.toString())) {
+			try (StreamingTransport transport = new StreamingTransport(workingDirectory(), Duration.ofMinutes(1),
+					invalidPath.toString())) {
 
 				CLIOptions options = CLIOptions.builder()
 					.model(HAIKU_MODEL)

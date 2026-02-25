@@ -36,8 +36,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for ClaudeAsyncClient with real Claude CLI.
  *
  * <p>
- * These tests verify the ClaudeClient.async() factory pattern works correctly with
- * the actual Claude CLI process using reactive patterns.
+ * These tests verify the ClaudeClient.async() factory pattern works correctly with the
+ * actual Claude CLI process using reactive patterns.
  * </p>
  */
 class ClaudeAsyncClientIT extends ClaudeCliTestBase {
@@ -59,7 +59,8 @@ class ClaudeAsyncClientIT extends ClaudeCliTestBase {
 		List<Message> messages = new ArrayList<>();
 
 		// When & Then - using TurnSpec pattern
-		StepVerifier.create(client.connect("What is 2+2? Reply with just the number.")
+		StepVerifier
+			.create(client.connect("What is 2+2? Reply with just the number.")
 				.messages()
 				.doOnNext(messages::add)
 				.then(client.close()))
@@ -90,20 +91,20 @@ class ClaudeAsyncClientIT extends ClaudeCliTestBase {
 
 		// Pure reactive chain for multi-turn using TurnSpec pattern
 		StepVerifier.create(
-			// First turn - establish context
-			client.connect("My favorite color is blue. Remember this. Just say OK.")
-				.messages()
-				.then()
-				// Second turn - verify context is maintained (flatMap chaining pattern)
-				.thenMany(client.query("What is my favorite color? Reply with just the color.")
-					.messages())
-				.doOnNext(msg -> {
-					if (msg instanceof AssistantMessage assistant) {
-						assistant.getTextContent().ifPresent(responseText::append);
-					}
-				})
-				.then(client.close())
-		).verifyComplete();
+				// First turn - establish context
+				client.connect("My favorite color is blue. Remember this. Just say OK.")
+					.messages()
+					.then()
+					// Second turn - verify context is maintained (flatMap chaining
+					// pattern)
+					.thenMany(client.query("What is my favorite color? Reply with just the color.").messages())
+					.doOnNext(msg -> {
+						if (msg instanceof AssistantMessage assistant) {
+							assistant.getTextContent().ifPresent(responseText::append);
+						}
+					})
+					.then(client.close()))
+			.verifyComplete();
 
 		// The response should mention blue
 		assertThat(responseText.toString().toLowerCase()).contains("blue");
@@ -125,16 +126,13 @@ class ClaudeAsyncClientIT extends ClaudeCliTestBase {
 		assertThat(client.isConnected()).isFalse();
 
 		// Connect and verify status using TurnSpec
-		StepVerifier.create(client.connect("Hello")
-				.messages()
-				.doOnSubscribe(s -> {
-					// Connection happens on subscribe
-				})
-				.doOnNext(msg -> assertThat(client.isConnected()).isTrue())
-				.then()
-				.doOnSuccess(v -> assertThat(client.isConnected()).isTrue())
-				.then(client.close()))
-			.verifyComplete();
+		StepVerifier.create(client.connect("Hello").messages().doOnSubscribe(s -> {
+			// Connection happens on subscribe
+		})
+			.doOnNext(msg -> assertThat(client.isConnected()).isTrue())
+			.then()
+			.doOnSuccess(v -> assertThat(client.isConnected()).isTrue())
+			.then(client.close())).verifyComplete();
 	}
 
 	@Test
@@ -153,15 +151,11 @@ class ClaudeAsyncClientIT extends ClaudeCliTestBase {
 		StringBuilder responseText = new StringBuilder();
 
 		// When & Then - using TurnSpec pattern
-		StepVerifier.create(client.connect("Say hello")
-				.messages()
-				.doOnNext(msg -> {
-					if (msg instanceof AssistantMessage assistant) {
-						assistant.getTextContent().ifPresent(responseText::append);
-					}
-				})
-				.then(client.close()))
-			.verifyComplete();
+		StepVerifier.create(client.connect("Say hello").messages().doOnNext(msg -> {
+			if (msg instanceof AssistantMessage assistant) {
+				assistant.getTextContent().ifPresent(responseText::append);
+			}
+		}).then(client.close())).verifyComplete();
 
 		// Response should have pirate-like language
 		String text = responseText.toString().toLowerCase();
@@ -182,7 +176,8 @@ class ClaudeAsyncClientIT extends ClaudeCliTestBase {
 			.build();
 
 		// When & Then - using TurnSpec pattern
-		StepVerifier.create(client.connect("Say hello")
+		StepVerifier
+			.create(client.connect("Say hello")
 				.messages()
 				.then(client.close())
 				.doOnSuccess(v -> assertThat(client.isConnected()).isFalse()))
@@ -206,7 +201,8 @@ class ClaudeAsyncClientIT extends ClaudeCliTestBase {
 			.build();
 
 		// When & Then - use reactive operators with TurnSpec
-		StepVerifier.create(client.connect("Say hello world")
+		StepVerifier
+			.create(client.connect("Say hello world")
 				.messages()
 				.filter(msg -> msg instanceof AssistantMessage)
 				.map(msg -> ((AssistantMessage) msg).getTextContent().orElse(""))

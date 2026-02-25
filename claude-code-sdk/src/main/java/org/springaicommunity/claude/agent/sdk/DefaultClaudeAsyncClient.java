@@ -117,20 +117,28 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	private final AtomicReference<StreamingTransport> transportRef = new AtomicReference<>();
 
 	/**
-	 * Per-turn unicast sink for streaming messages to the current receiveResponse() subscriber.
+	 * Per-turn unicast sink for streaming messages to the current receiveResponse()
+	 * subscriber.
 	 *
-	 * <p><b>Design Decision:</b> We use a per-turn unicast sink instead of a shared multicast sink
-	 * to solve the multi-turn conversation problem. With a shared multicast sink, when
-	 * {@code takeUntil(ResultMessage)} cancels after the first turn, the sink enters a corrupted
-	 * state and subsequent subscriptions complete immediately.</p>
+	 * <p>
+	 * <b>Design Decision:</b> We use a per-turn unicast sink instead of a shared
+	 * multicast sink to solve the multi-turn conversation problem. With a shared
+	 * multicast sink, when {@code takeUntil(ResultMessage)} cancels after the first turn,
+	 * the sink enters a corrupted state and subsequent subscriptions complete
+	 * immediately.
+	 * </p>
 	 *
-	 * <p><b>Pattern:</b> Each {@link #receiveResponse()} call creates a fresh unicast sink via
-	 * {@link Sinks.Many#unicast()}. The {@link #handleMessage} callback routes messages to
-	 * whatever sink is currently active, and naturally completes the sink when a
-	 * {@link ResultMessage} arrives (no {@code takeUntil} operator needed).</p>
+	 * <p>
+	 * <b>Pattern:</b> Each {@link #receiveResponse()} call creates a fresh unicast sink
+	 * via {@link Sinks.Many#unicast()}. The {@link #handleMessage} callback routes
+	 * messages to whatever sink is currently active, and naturally completes the sink
+	 * when a {@link ResultMessage} arrives (no {@code takeUntil} operator needed).
+	 * </p>
 	 *
-	 * <p>AtomicReference enables thread-safe sink swapping between turns while ensuring
-	 * only one turn is active at a time.</p>
+	 * <p>
+	 * AtomicReference enables thread-safe sink swapping between turns while ensuring only
+	 * one turn is active at a time.
+	 * </p>
 	 *
 	 * @see #receiveResponse()
 	 * @see #handleMessage(ParsedMessage)
@@ -138,8 +146,8 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	private final AtomicReference<Sinks.Many<Message>> currentTurnSink = new AtomicReference<>();
 
 	/**
-	 * Sink for raw parsed messages (including control messages).
-	 * Used by {@link #receiveMessages()} for low-level access.
+	 * Sink for raw parsed messages (including control messages). Used by
+	 * {@link #receiveMessages()} for low-level access.
 	 */
 	private volatile Sinks.Many<ParsedMessage> rawMessageSink;
 
@@ -152,6 +160,7 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 
 	// Cross-turn message handlers (thread-safe for concurrent registration)
 	private final List<Consumer<Message>> messageHandlers = new CopyOnWriteArrayList<>();
+
 	private final List<Consumer<ResultMessage>> resultHandlers = new CopyOnWriteArrayList<>();
 
 	/**
@@ -340,32 +349,37 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	/**
 	 * Receives response messages for the current turn as a reactive stream.
 	 *
-	 * <p><b>Per-Turn Unicast Sink Pattern:</b> Each call creates a fresh unicast sink that
+	 * <p>
+	 * <b>Per-Turn Unicast Sink Pattern:</b> Each call creates a fresh unicast sink that
 	 * receives messages until a {@link ResultMessage} arrives. This design solves the
 	 * multi-turn problem where shared multicast sinks become corrupted after
-	 * {@code takeUntil} cancellation.</p>
+	 * {@code takeUntil} cancellation.
+	 * </p>
 	 *
-	 * <p><b>How it works:</b></p>
+	 * <p>
+	 * <b>How it works:</b>
+	 * </p>
 	 * <ol>
-	 *   <li>{@code Flux.defer()} delays sink creation until subscription</li>
-	 *   <li>A fresh {@link Sinks.Many#unicast()} sink is created for this turn</li>
-	 *   <li>The sink is atomically swapped into {@link #currentTurnSink}</li>
-	 *   <li>{@link #handleMessage} routes messages to the active sink</li>
-	 *   <li>When {@link ResultMessage} arrives, {@code handleMessage} completes the sink</li>
-	 *   <li>{@code doFinally} clears the reference to allow the next turn</li>
+	 * <li>{@code Flux.defer()} delays sink creation until subscription</li>
+	 * <li>A fresh {@link Sinks.Many#unicast()} sink is created for this turn</li>
+	 * <li>The sink is atomically swapped into {@link #currentTurnSink}</li>
+	 * <li>{@link #handleMessage} routes messages to the active sink</li>
+	 * <li>When {@link ResultMessage} arrives, {@code handleMessage} completes the
+	 * sink</li>
+	 * <li>{@code doFinally} clears the reference to allow the next turn</li>
 	 * </ol>
 	 *
-	 * <p><b>Why no takeUntil:</b> The {@code takeUntil} operator cancels upstream on predicate
-	 * match, which corrupts shared sinks. Instead, we complete the sink directly in
-	 * {@code handleMessage} when we see {@code ResultMessage}.</p>
-	 *
+	 * <p>
+	 * <b>Why no takeUntil:</b> The {@code takeUntil} operator cancels upstream on
+	 * predicate match, which corrupts shared sinks. Instead, we complete the sink
+	 * directly in {@code handleMessage} when we see {@code ResultMessage}.
+	 * </p>
 	 * @return Flux of messages that completes after ResultMessage
 	 */
 	@Override
 	public Flux<Message> receiveResponse() {
 		return Flux.defer(() -> {
-			logger.debug("receiveResponse() subscribed: connected={}, closed={}",
-					connected.get(), closed.get());
+			logger.debug("receiveResponse() subscribed: connected={}, closed={}", connected.get(), closed.get());
 			if (!connected.get() || closed.get()) {
 				return Flux.error(new IllegalStateException("Client is not connected"));
 			}
@@ -382,8 +396,7 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 			}
 
 			return turnSink.asFlux()
-				.doOnNext(msg -> logger.debug("receiveResponse emitting: {}",
-						msg.getClass().getSimpleName()))
+				.doOnNext(msg -> logger.debug("receiveResponse emitting: {}", msg.getClass().getSimpleName()))
 				.doOnComplete(() -> logger.debug("receiveResponse completed"))
 				.doOnCancel(() -> logger.debug("receiveResponse cancelled"))
 				.doFinally(signal -> {
@@ -542,18 +555,24 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	/**
 	 * Routes incoming messages to handlers and sinks.
 	 *
-	 * <p><b>Message Routing Order:</b></p>
+	 * <p>
+	 * <b>Message Routing Order:</b>
+	 * </p>
 	 * <ol>
-	 *   <li>All messages go to {@link #rawMessageSink} for low-level subscribers</li>
-	 *   <li>Cross-turn handlers are notified (session-scoped concerns)</li>
-	 *   <li>Regular messages go to {@link #currentTurnSink} for turn-scoped subscribers</li>
-	 *   <li>{@link ResultMessage} triggers natural sink completion (no takeUntil needed)</li>
+	 * <li>All messages go to {@link #rawMessageSink} for low-level subscribers</li>
+	 * <li>Cross-turn handlers are notified (session-scoped concerns)</li>
+	 * <li>Regular messages go to {@link #currentTurnSink} for turn-scoped
+	 * subscribers</li>
+	 * <li>{@link ResultMessage} triggers natural sink completion (no takeUntil
+	 * needed)</li>
 	 * </ol>
 	 *
-	 * <p><b>Why ResultMessage completes the sink:</b> In the per-turn unicast pattern,
-	 * we complete the sink directly when ResultMessage arrives rather than using
-	 * {@code takeUntil}. This avoids the upstream cancellation that corrupts shared sinks.</p>
-	 *
+	 * <p>
+	 * <b>Why ResultMessage completes the sink:</b> In the per-turn unicast pattern, we
+	 * complete the sink directly when ResultMessage arrives rather than using
+	 * {@code takeUntil}. This avoids the upstream cancellation that corrupts shared
+	 * sinks.
+	 * </p>
 	 * @param message the parsed message from the CLI
 	 */
 	private void handleMessage(ParsedMessage message) {
@@ -570,7 +589,8 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 			for (Consumer<Message> handler : messageHandlers) {
 				try {
 					handler.accept(msg);
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					logger.warn("Message handler threw exception", e);
 				}
 			}
@@ -580,7 +600,8 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 				for (Consumer<ResultMessage> handler : resultHandlers) {
 					try {
 						handler.accept(resultMsg);
-					} catch (Exception e) {
+					}
+					catch (Exception e) {
 						logger.warn("Result handler threw exception", e);
 					}
 				}
@@ -591,11 +612,10 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 			if (sink != null) {
 				Sinks.EmitResult result = sink.tryEmitNext(msg);
 				if (result.isSuccess()) {
-					logger.debug("handleMessage: emitted {} to turn sink",
-							msg.getClass().getSimpleName());
-				} else {
-					logger.warn("handleMessage: failed to emit {} - result={}",
-							msg.getClass().getSimpleName(), result);
+					logger.debug("handleMessage: emitted {} to turn sink", msg.getClass().getSimpleName());
+				}
+				else {
+					logger.warn("handleMessage: failed to emit {} - result={}", msg.getClass().getSimpleName(), result);
 				}
 
 				// Complete the sink when ResultMessage arrives (natural completion)
@@ -603,9 +623,9 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 					logger.debug("handleMessage: ResultMessage received, completing turn sink");
 					sink.tryEmitComplete();
 				}
-			} else {
-				logger.debug("handleMessage: no turn sink active, skipping {}",
-						msg.getClass().getSimpleName());
+			}
+			else {
+				logger.debug("handleMessage: no turn sink active, skipping {}", msg.getClass().getSimpleName());
 			}
 		}
 	}
@@ -684,10 +704,8 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 		try {
 			String toolName = canUseTool.toolName();
 			Map<String, Object> input = canUseTool.input();
-			ToolPermissionContext context = new ToolPermissionContext(
-					canUseTool.permissionSuggestions(),
-					canUseTool.blockedPath(),
-					requestId);
+			ToolPermissionContext context = new ToolPermissionContext(canUseTool.permissionSuggestions(),
+					canUseTool.blockedPath(), requestId);
 
 			PermissionResult result = toolPermissionCallback.checkPermission(toolName, input, context);
 
@@ -821,9 +839,9 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	 * Default implementation of {@link TurnSpec} providing lazy response handling.
 	 *
 	 * <p>
-	 * Inspired by Spring WebClient's ResponseSpec pattern. All operations are lazy -
-	 * the actual send (connect/query) is triggered when you subscribe to a terminal
-	 * operation ({@link #text()}, {@link #textStream()}, or {@link #messages()}).
+	 * Inspired by Spring WebClient's ResponseSpec pattern. All operations are lazy - the
+	 * actual send (connect/query) is triggered when you subscribe to a terminal operation
+	 * ({@link #text()}, {@link #textStream()}, or {@link #messages()}).
 	 * </p>
 	 */
 	private class DefaultTurnSpec implements TurnSpec {
@@ -863,8 +881,7 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 		@Override
 		public Flux<Message> messages() {
 			// Lazy: send action triggers on subscribe, then stream all messages
-			return sendAction.get()
-				.thenMany(receiveResponse());
+			return sendAction.get().thenMany(receiveResponse());
 		}
 
 	}

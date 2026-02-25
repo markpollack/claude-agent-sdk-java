@@ -228,7 +228,8 @@ class ClaudeSyncClientTest {
 		void shouldThrowWhenSettingModelWithoutConnection() {
 			ClaudeSyncClient client = ClaudeClient.sync().workingDirectory(workingDirectory).build();
 
-			assertThatThrownBy(() -> client.setModel("claude-opus-4-20250514")).isInstanceOf(IllegalStateException.class)
+			assertThatThrownBy(() -> client.setModel("claude-opus-4-20250514"))
+				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("not connected");
 			client.close();
 		}

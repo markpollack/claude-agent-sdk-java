@@ -334,8 +334,8 @@ class StdioTransportIntegrationIT extends ClaudeCliTestBase {
 
 		// null claudePath is allowed - auto-discovers via ClaudeCliDiscovery
 		assertThatCode(() -> {
-			try (StreamingTransport transport = new StreamingTransport(workingDirectory(),
-					Duration.ofMinutes(1), null)) {
+			try (StreamingTransport transport = new StreamingTransport(workingDirectory(), Duration.ofMinutes(1),
+					null)) {
 				assertThat(transport).isNotNull();
 			}
 		}).doesNotThrowAnyException();

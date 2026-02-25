@@ -71,9 +71,10 @@ public class MessageParser {
 			case "system" -> parseSystemMessage(node);
 			case "result" -> parseResultMessage(node);
 			default -> {
-				logger.error("Unrecognized message type '{}' — skipping. "
-						+ "This may indicate the Claude CLI has added a new message type. "
-						+ "Raw JSON: {}", type, node);
+				logger.error(
+						"Unrecognized message type '{}' — skipping. "
+								+ "This may indicate the Claude CLI has added a new message type. " + "Raw JSON: {}",
+						type, node);
 				yield null;
 			}
 		};

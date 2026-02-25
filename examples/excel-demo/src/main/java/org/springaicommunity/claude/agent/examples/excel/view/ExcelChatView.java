@@ -32,8 +32,9 @@ import reactor.core.Disposable;
 /**
  * Main chat view for the Excel Demo application.
  *
- * <p>This view demonstrates streaming responses from Claude to a Vaadin UI
- * using thread-safe patterns with ui.access() for all reactive callbacks.
+ * <p>
+ * This view demonstrates streaming responses from Claude to a Vaadin UI using thread-safe
+ * patterns with ui.access() for all reactive callbacks.
  */
 @SpringComponent
 @UIScope
@@ -125,8 +126,7 @@ public class ExcelChatView extends VerticalLayout {
 		header.setWidthFull();
 		header.setPadding(true);
 		header.setAlignItems(FlexComponent.Alignment.CENTER);
-		header.getStyle().set("background-color", "white")
-			.set("border-bottom", "1px solid var(--lumo-contrast-10pct)");
+		header.getStyle().set("background-color", "white").set("border-bottom", "1px solid var(--lumo-contrast-10pct)");
 
 		return header;
 	}
@@ -166,8 +166,9 @@ public class ExcelChatView extends VerticalLayout {
 		MarkdownMessage userMessage = new MarkdownMessage(prompt, "USER", LocalDateTime.now());
 		userMessage.setAvatarColor(MarkdownMessage.Color.AVATAR_PRESETS[0]);
 		// Style user message with Excel green
-		userMessage.getStyle().set("--markdown-message-user-bg", "#217346").set("--markdown-message-user-color",
-				"white");
+		userMessage.getStyle()
+			.set("--markdown-message-user-bg", "#217346")
+			.set("--markdown-message-user-color", "white");
 		messageList.add(userMessage);
 
 		// Create assistant message placeholder

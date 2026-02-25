@@ -47,7 +47,9 @@ public record AssistantMessage(@JsonProperty("content") List<ContentBlock> conte
 	 * Returns all text content from this message concatenated, or empty string if none.
 	 * This is a convenience method for common use cases where you want the text directly.
 	 *
-	 * <p>Example:</p>
+	 * <p>
+	 * Example:
+	 * </p>
 	 * <pre>{@code
 	 * for (Message msg : client.messages()) {
 	 *     if (msg instanceof AssistantMessage am) {

@@ -74,8 +74,7 @@ import java.util.Map;
  * }
  * }</pre>
  *
- * <h2>With Hooks</h2>
- * <pre>{@code
+ * <h2>With Hooks</h2> <pre>{@code
  * HookRegistry hooks = new HookRegistry();
  * hooks.registerPreToolUse("Bash", input -> {
  *     String cmd = input.getArgument("command", String.class).orElse("");
@@ -130,37 +129,44 @@ public interface ClaudeClient {
 	}
 
 	/**
-	 * Fluent builder for creating a {@link ClaudeSyncClient} with full configuration control.
+	 * Fluent builder for creating a {@link ClaudeSyncClient} with full configuration
+	 * control.
 	 *
 	 * <p>
-	 * Use this builder when you want to configure all options inline using method chaining.
-	 * This is the recommended approach for most use cases.
+	 * Use this builder when you want to configure all options inline using method
+	 * chaining. This is the recommended approach for most use cases.
 	 * </p>
 	 *
 	 * <h2>Configuration Categories</h2>
 	 *
 	 * <h3>Session Configuration</h3>
 	 * <ul>
-	 * <li>{@link #workingDirectory(Path)} - Directory where Claude CLI operates (required)</li>
+	 * <li>{@link #workingDirectory(Path)} - Directory where Claude CLI operates
+	 * (required)</li>
 	 * <li>{@link #timeout(Duration)} - Operation timeout (default: 10 minutes)</li>
 	 * <li>{@link #claudePath(String)} - Custom path to Claude CLI executable</li>
-	 * <li>{@link #hookRegistry(HookRegistry)} - Hook registry for intercepting tool calls</li>
+	 * <li>{@link #hookRegistry(HookRegistry)} - Hook registry for intercepting tool
+	 * calls</li>
 	 * </ul>
 	 *
 	 * <h3>Model Configuration</h3>
 	 * <ul>
-	 * <li>{@link #model(String)} - Claude model to use (e.g., "claude-sonnet-4-20250514")</li>
+	 * <li>{@link #model(String)} - Claude model to use (e.g.,
+	 * "claude-sonnet-4-20250514")</li>
 	 * <li>{@link #systemPrompt(String)} - System prompt for the conversation</li>
 	 * <li>{@link #appendSystemPrompt(String)} - Text to append to the system prompt</li>
 	 * <li>{@link #maxTokens(Integer)} - Maximum response tokens</li>
-	 * <li>{@link #maxThinkingTokens(Integer)} - Maximum thinking tokens (extended thinking)</li>
+	 * <li>{@link #maxThinkingTokens(Integer)} - Maximum thinking tokens (extended
+	 * thinking)</li>
 	 * </ul>
 	 *
 	 * <h3>Tool Configuration</h3>
 	 * <ul>
 	 * <li>{@link #tools(List)} - Base set of tools to enable</li>
-	 * <li>{@link #allowedTools(List)} - Explicitly allow specific tools (only these are available)</li>
-	 * <li>{@link #disallowedTools(List)} - Block specific tools (all others remain available)</li>
+	 * <li>{@link #allowedTools(List)} - Explicitly allow specific tools (only these are
+	 * available)</li>
+	 * <li>{@link #disallowedTools(List)} - Block specific tools (all others remain
+	 * available)</li>
 	 * <li>{@link #permissionMode(PermissionMode)} - Tool permission mode</li>
 	 * </ul>
 	 *
@@ -176,8 +182,7 @@ public interface ClaudeClient {
 	 * <li>{@link #mcpServers(Map)} - Set all MCP server configurations</li>
 	 * </ul>
 	 *
-	 * <h2>Example</h2>
-	 * <pre>{@code
+	 * <h2>Example</h2> <pre>{@code
 	 * ClaudeSyncClient client = ClaudeClient.sync()
 	 *     .workingDirectory(Path.of("."))
 	 *     .model("claude-sonnet-4-20250514")
@@ -435,8 +440,8 @@ public interface ClaudeClient {
 	 * Builder for creating a {@link ClaudeSyncClient} with pre-configured CLI options.
 	 *
 	 * <p>
-	 * Use this builder when you have a pre-built {@link CLIOptions} object and only need to
-	 * configure session-level settings. This approach is useful when:
+	 * Use this builder when you have a pre-built {@link CLIOptions} object and only need
+	 * to configure session-level settings. This approach is useful when:
 	 * </p>
 	 * <ul>
 	 * <li>CLI options are loaded from configuration files</li>
@@ -450,19 +455,21 @@ public interface ClaudeClient {
 	 * Only session-level configuration is exposed (CLI options are already set):
 	 * </p>
 	 * <ul>
-	 * <li>{@link #workingDirectory(Path)} - Directory where Claude CLI operates (required)</li>
+	 * <li>{@link #workingDirectory(Path)} - Directory where Claude CLI operates
+	 * (required)</li>
 	 * <li>{@link #timeout(Duration)} - Operation timeout (default: 10 minutes)</li>
 	 * <li>{@link #claudePath(String)} - Custom path to Claude CLI executable</li>
-	 * <li>{@link #hookRegistry(HookRegistry)} - Hook registry for intercepting tool calls</li>
+	 * <li>{@link #hookRegistry(HookRegistry)} - Hook registry for intercepting tool
+	 * calls</li>
 	 * </ul>
 	 *
 	 * <p>
-	 * Model, tool, and budget configuration are <strong>not available</strong> on this builder
-	 * since they are already defined in the {@link CLIOptions} passed to {@link #sync(CLIOptions)}.
+	 * Model, tool, and budget configuration are <strong>not available</strong> on this
+	 * builder since they are already defined in the {@link CLIOptions} passed to
+	 * {@link #sync(CLIOptions)}.
 	 * </p>
 	 *
-	 * <h2>Example</h2>
-	 * <pre>{@code
+	 * <h2>Example</h2> <pre>{@code
 	 * // Create CLI options (can be loaded from config, shared, etc.)
 	 * CLIOptions options = CLIOptions.builder()
 	 *     .model("claude-sonnet-4-20250514")
@@ -594,11 +601,12 @@ public interface ClaudeClient {
 	}
 
 	/**
-	 * Fluent builder for creating a {@link ClaudeAsyncClient} with full configuration control.
+	 * Fluent builder for creating a {@link ClaudeAsyncClient} with full configuration
+	 * control.
 	 *
 	 * <p>
-	 * Use this builder when you want to configure all options inline using method chaining.
-	 * This is the recommended approach for most use cases.
+	 * Use this builder when you want to configure all options inline using method
+	 * chaining. This is the recommended approach for most use cases.
 	 * </p>
 	 *
 	 * <p>
@@ -606,8 +614,7 @@ public interface ClaudeClient {
 	 * detailed documentation of each option.
 	 * </p>
 	 *
-	 * <h2>Example</h2>
-	 * <pre>{@code
+	 * <h2>Example</h2> <pre>{@code
 	 * ClaudeAsyncClient client = ClaudeClient.async()
 	 *     .workingDirectory(Path.of("."))
 	 *     .model("claude-sonnet-4-20250514")
@@ -781,12 +788,11 @@ public interface ClaudeClient {
 	 * Builder for creating a {@link ClaudeAsyncClient} with pre-configured CLI options.
 	 *
 	 * <p>
-	 * Use this builder when you have a pre-built {@link CLIOptions} object and only need to
-	 * configure session-level settings.
+	 * Use this builder when you have a pre-built {@link CLIOptions} object and only need
+	 * to configure session-level settings.
 	 * </p>
 	 *
-	 * <h2>Example</h2>
-	 * <pre>{@code
+	 * <h2>Example</h2> <pre>{@code
 	 * CLIOptions options = CLIOptions.builder()
 	 *     .model("claude-sonnet-4-20250514")
 	 *     .build();

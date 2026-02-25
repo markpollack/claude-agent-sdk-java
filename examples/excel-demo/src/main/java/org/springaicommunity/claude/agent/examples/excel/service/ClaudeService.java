@@ -22,8 +22,9 @@ import reactor.core.publisher.Mono;
 /**
  * Service for interacting with Claude via the Claude Agent SDK.
  *
- * <p>Uses ClaudeAsyncClient to provide streaming text responses suitable for
- * Vaadin UI integration with proper thread-safety patterns.
+ * <p>
+ * Uses ClaudeAsyncClient to provide streaming text responses suitable for Vaadin UI
+ * integration with proper thread-safety patterns.
  */
 @Service
 public class ClaudeService {
@@ -35,9 +36,9 @@ public class ClaudeService {
 	/**
 	 * Streams text responses from Claude for the given prompt.
 	 *
-	 * <p>This method returns a Flux that emits text chunks as they arrive,
-	 * suitable for real-time streaming to Vaadin UI components.
-	 *
+	 * <p>
+	 * This method returns a Flux that emits text chunks as they arrive, suitable for
+	 * real-time streaming to Vaadin UI components.
 	 * @param prompt the user's prompt
 	 * @return Flux of text chunks
 	 */
@@ -47,7 +48,6 @@ public class ClaudeService {
 
 	/**
 	 * Streams text responses from Claude with a custom working directory.
-	 *
 	 * @param prompt the user's prompt
 	 * @param workingDirectory optional working directory for file operations
 	 * @return Flux of text chunks
@@ -85,21 +85,17 @@ public class ClaudeService {
 						status.append("\n\n*Using tool: ").append(toolName).append("...*\n\n");
 					}
 					// Return tool status followed by any text content
-					return assistant.getTextContent()
-						.map(text -> {
-							log.info("[ASSISTANT] Text content: {} chars", text.length());
-							return Mono.just(status.toString() + text);
-						})
-						.orElse(Mono.just(status.toString()));
+					return assistant.getTextContent().map(text -> {
+						log.info("[ASSISTANT] Text content: {} chars", text.length());
+						return Mono.just(status.toString() + text);
+					}).orElse(Mono.just(status.toString()));
 				}
 
 				// Just text content
-				return assistant.getTextContent()
-					.map(text -> {
-						log.info("[ASSISTANT] Text only: {} chars", text.length());
-						return Mono.just(text);
-					})
-					.orElse(Mono.empty());
+				return assistant.getTextContent().map(text -> {
+					log.info("[ASSISTANT] Text only: {} chars", text.length());
+					return Mono.just(text);
+				}).orElse(Mono.empty());
 			})
 			.doOnNext(text -> log.info("[OUTPUT] Emitting chunk: {} chars", text.length()))
 			.doOnComplete(() -> log.info("[STREAM] Query COMPLETED successfully"))
@@ -112,22 +108,19 @@ public class ClaudeService {
 
 	/**
 	 * Gets a complete text response from Claude (non-streaming).
-	 *
 	 * @param prompt the user's prompt
 	 * @return Mono containing the complete response text
 	 */
 	public Mono<String> getText(String prompt) {
-		return streamText(prompt)
-			.reduce(new StringBuilder(), StringBuilder::append)
-			.map(StringBuilder::toString);
+		return streamText(prompt).reduce(new StringBuilder(), StringBuilder::append).map(StringBuilder::toString);
 	}
 
 	/**
 	 * Streams all messages (including tool use) from Claude.
 	 *
-	 * <p>Use this method when you need access to the full message stream
-	 * including tool use events, thinking blocks, etc.
-	 *
+	 * <p>
+	 * Use this method when you need access to the full message stream including tool use
+	 * events, thinking blocks, etc.
 	 * @param prompt the user's prompt
 	 * @return Flux of all messages
 	 */
@@ -139,8 +132,7 @@ public class ClaudeService {
 			.permissionMode(PermissionMode.BYPASS_PERMISSIONS)
 			.build();
 
-		return client.queryAndReceive(prompt)
-			.doFinally(signal -> client.close().subscribe());
+		return client.queryAndReceive(prompt).doFinally(signal -> client.close().subscribe());
 	}
 
 	/**
@@ -165,16 +157,16 @@ public class ClaudeService {
 	 */
 	private static String getDefaultSystemPrompt() {
 		return """
-			You are an AI assistant specialized in creating Excel spreadsheets.
+				You are an AI assistant specialized in creating Excel spreadsheets.
 
-			When the user describes a spreadsheet they need:
-			1. Understand their requirements clearly
-			2. Suggest an appropriate structure (columns, rows, formulas)
-			3. Provide the data in a clear, structured format
-			4. Explain any formulas or calculations you recommend
+				When the user describes a spreadsheet they need:
+				1. Understand their requirements clearly
+				2. Suggest an appropriate structure (columns, rows, formulas)
+				3. Provide the data in a clear, structured format
+				4. Explain any formulas or calculations you recommend
 
-			Be concise but thorough. Focus on practical, usable spreadsheet designs.
-			""";
+				Be concise but thorough. Focus on practical, usable spreadsheet designs.
+				""";
 	}
 
 	/**

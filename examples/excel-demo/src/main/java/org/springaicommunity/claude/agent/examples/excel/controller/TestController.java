@@ -11,10 +11,8 @@ import reactor.core.publisher.Mono;
 /**
  * REST controller for programmatic testing of Claude queries.
  *
- * Usage:
- *   curl -X POST "http://localhost:8080/api/test/query" \
- *        -H "Content-Type: text/plain" \
- *        -d "Create a simple budget tracker"
+ * Usage: curl -X POST "http://localhost:8080/api/test/query" \ -H "Content-Type:
+ * text/plain" \ -d "Create a simple budget tracker"
  */
 @RestController
 @RequestMapping("/api/test")
@@ -30,7 +28,6 @@ public class TestController {
 
 	/**
 	 * Submit a query and get complete response (non-streaming).
-	 *
 	 * @param prompt the question to ask Claude
 	 * @return complete text response
 	 */
@@ -55,4 +52,5 @@ public class TestController {
 	public String health() {
 		return "OK - Excel Demo Test API";
 	}
+
 }

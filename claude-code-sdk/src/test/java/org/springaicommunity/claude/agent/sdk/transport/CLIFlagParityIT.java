@@ -36,88 +36,83 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * CLI Flag Parity Integration Test - Uses CLI's --help as the golden standard.
  *
- * <p>This test extracts all available flags from the Claude CLI's --help output
- * and verifies that the Java SDK's CLIOptions supports them. When the CLI adds
- * new flags, this test will fail, reminding us to add SDK support.</p>
+ * <p>
+ * This test extracts all available flags from the Claude CLI's --help output and verifies
+ * that the Java SDK's CLIOptions supports them. When the CLI adds new flags, this test
+ * will fail, reminding us to add SDK support.
+ * </p>
  *
- * <p>Background: Two tutorial modules failed due to missing flag support:</p>
+ * <p>
+ * Background: Two tutorial modules failed due to missing flag support:
+ * </p>
  * <ul>
- *   <li>Module 09: --json-schema parsing was broken</li>
- *   <li>Module 11: --resume flag was completely missing</li>
+ * <li>Module 09: --json-schema parsing was broken</li>
+ * <li>Module 11: --resume flag was completely missing</li>
  * </ul>
  */
 @DisplayName("CLI Flag Parity IT")
 class CLIFlagParityIT extends ClaudeCliTestBase {
 
 	private static Set<String> cliFlags;
+
 	private static String cliHelpOutput;
 
 	/**
-	 * Flags that are intentionally NOT supported by the SDK.
-	 * Each exclusion must have a documented reason.
+	 * Flags that are intentionally NOT supported by the SDK. Each exclusion must have a
+	 * documented reason.
 	 */
 	private static final Set<String> EXCLUDED_FLAGS = Set.of(
-		// Interactive/UI flags - not applicable to SDK usage
-		"help", "h",
-		"version", "v",
-		"debug", "d",
-		"print", "p",  // SDK always uses stream-json mode
-		"ide",
-		"chrome", "no-chrome",
-		"disable-slash-commands",
+			// Interactive/UI flags - not applicable to SDK usage
+			"help", "h", "version", "v", "debug", "d", "print", "p", // SDK always uses
+																		// stream-json
+																		// mode
+			"ide", "chrome", "no-chrome", "disable-slash-commands",
 
-		// Deprecated flags
-		"mcp-debug",
+			// Deprecated flags
+			"mcp-debug",
 
-		// Session management handled differently in SDK
-		"no-session-persistence",
-		"session-id",
-		"replay-user-messages",
+			// Session management handled differently in SDK
+			"no-session-persistence", "session-id", "replay-user-messages",
 
-		// Security flag that requires special handling
-		"allow-dangerously-skip-permissions",
+			// Security flag that requires special handling
+			"allow-dangerously-skip-permissions",
 
-		// Config flags handled via CLIOptions fields
-		"strict-mcp-config",
+			// Config flags handled via CLIOptions fields
+			"strict-mcp-config",
 
-		// Agent selection (different from --agents for custom agents)
-		"agent",
+			// Agent selection (different from --agents for custom agents)
+			"agent",
 
-		// API configuration
-		"betas",
+			// API configuration
+			"betas",
 
-		// Always added by SDK automatically
-		"verbose"
-	);
+			// Always added by SDK automatically
+			"verbose");
 
 	/**
-	 * Mapping from CLI flag names to CLIOptions builder method names.
-	 * Only needed when names don't match directly.
+	 * Mapping from CLI flag names to CLIOptions builder method names. Only needed when
+	 * names don't match directly.
 	 */
 	private static final java.util.Map<String, String> FLAG_TO_METHOD = java.util.Map.ofEntries(
-		java.util.Map.entry("continue", "continueConversation"),
-		java.util.Map.entry("c", "continueConversation"),
-		java.util.Map.entry("r", "resume"),
-		java.util.Map.entry("allowed-tools", "allowedTools"),
-		java.util.Map.entry("disallowed-tools", "disallowedTools"),
-		java.util.Map.entry("add-dir", "addDirs"),
-		java.util.Map.entry("plugin-dir", "plugins"),
-		java.util.Map.entry("mcp-config", "mcpServers"),
-		java.util.Map.entry("output-format", "outputFormat"),
-		java.util.Map.entry("input-format", "outputFormat"),  // Handled internally
-		java.util.Map.entry("system-prompt", "systemPrompt"),
-		java.util.Map.entry("append-system-prompt", "appendSystemPrompt"),
-		java.util.Map.entry("json-schema", "jsonSchema"),
-		java.util.Map.entry("max-budget-usd", "maxBudgetUsd"),
-		java.util.Map.entry("max-thinking-tokens", "maxThinkingTokens"),
-		java.util.Map.entry("permission-mode", "permissionMode"),
-		java.util.Map.entry("permission-prompt-tool", "permissionPromptToolName"),
-		java.util.Map.entry("fallback-model", "fallbackModel"),
-		java.util.Map.entry("fork-session", "forkSession"),
-		java.util.Map.entry("include-partial-messages", "includePartialMessages"),
-		java.util.Map.entry("setting-sources", "settingSources"),
-		java.util.Map.entry("max-turns", "maxTurns"),
-		java.util.Map.entry("dangerously-skip-permissions", "permissionMode")  // Handled via PermissionMode enum
+			java.util.Map.entry("continue", "continueConversation"), java.util.Map.entry("c", "continueConversation"),
+			java.util.Map.entry("r", "resume"), java.util.Map.entry("allowed-tools", "allowedTools"),
+			java.util.Map.entry("disallowed-tools", "disallowedTools"), java.util.Map.entry("add-dir", "addDirs"),
+			java.util.Map.entry("plugin-dir", "plugins"), java.util.Map.entry("mcp-config", "mcpServers"),
+			java.util.Map.entry("output-format", "outputFormat"), java.util.Map.entry("input-format", "outputFormat"), // Handled
+																														// internally
+			java.util.Map.entry("system-prompt", "systemPrompt"),
+			java.util.Map.entry("append-system-prompt", "appendSystemPrompt"),
+			java.util.Map.entry("json-schema", "jsonSchema"), java.util.Map.entry("max-budget-usd", "maxBudgetUsd"),
+			java.util.Map.entry("max-thinking-tokens", "maxThinkingTokens"),
+			java.util.Map.entry("permission-mode", "permissionMode"),
+			java.util.Map.entry("permission-prompt-tool", "permissionPromptToolName"),
+			java.util.Map.entry("fallback-model", "fallbackModel"), java.util.Map.entry("fork-session", "forkSession"),
+			java.util.Map.entry("include-partial-messages", "includePartialMessages"),
+			java.util.Map.entry("setting-sources", "settingSources"), java.util.Map.entry("max-turns", "maxTurns"),
+			java.util.Map.entry("dangerously-skip-permissions", "permissionMode") // Handled
+																					// via
+																					// PermissionMode
+																					// enum
 	);
 
 	@BeforeAll
@@ -137,8 +132,8 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 	}
 
 	/**
-	 * Parses flag names from CLI help output.
-	 * Matches patterns like: -c, --continue, --model <model>, --tools <tools...>
+	 * Parses flag names from CLI help output. Matches patterns like: -c, --continue,
+	 * --model <model>, --tools <tools...>
 	 */
 	private static Set<String> parseFlags(String helpOutput) {
 		Set<String> flags = new HashSet<>();
@@ -169,7 +164,7 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 
 		for (String flag : cliFlags) {
 			if (EXCLUDED_FLAGS.contains(flag)) {
-				continue;  // Intentionally excluded
+				continue; // Intentionally excluded
 			}
 
 			String methodName = FLAG_TO_METHOD.getOrDefault(flag, toCamelCase(flag));
@@ -180,9 +175,9 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 		}
 
 		assertThat(unsupportedFlags)
-			.as("All CLI flags should have corresponding CLIOptions builder methods. " +
-				"Either add support or add to EXCLUDED_FLAGS with justification. " +
-				"Unsupported flags: " + unsupportedFlags)
+			.as("All CLI flags should have corresponding CLIOptions builder methods. "
+					+ "Either add support or add to EXCLUDED_FLAGS with justification. " + "Unsupported flags: "
+					+ unsupportedFlags)
 			.isEmpty();
 	}
 
@@ -197,28 +192,14 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 	@DisplayName("Critical SDK flags should be in CLI")
 	void criticalSdkFlagsShouldBeInCli() {
 		// These are flags we know we support - verify CLI still has them
-		// Note: Some flags like max-turns and max-thinking-tokens work but aren't in --help
-		List<String> criticalFlags = List.of(
-			"model",
-			"system-prompt",
-			"allowedTools",
-			"disallowedTools",
-			"permission-mode",
-			"resume",
-			"continue",
-			"json-schema",
-			"max-budget-usd",
-			"agents",
-			"mcp-config",
-			"fallback-model",
-			"fork-session",
-			"settings"
-		);
+		// Note: Some flags like max-turns and max-thinking-tokens work but aren't in
+		// --help
+		List<String> criticalFlags = List.of("model", "system-prompt", "allowedTools", "disallowedTools",
+				"permission-mode", "resume", "continue", "json-schema", "max-budget-usd", "agents", "mcp-config",
+				"fallback-model", "fork-session", "settings");
 
 		for (String flag : criticalFlags) {
-			assertThat(cliFlags)
-				.as("CLI should support flag: " + flag)
-				.contains(flag);
+			assertThat(cliFlags).as("CLI should support flag: " + flag).contains(flag);
 		}
 	}
 
@@ -257,10 +238,12 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 		for (char c : kebab.toCharArray()) {
 			if (c == '-') {
 				capitalizeNext = true;
-			} else if (capitalizeNext) {
+			}
+			else if (capitalizeNext) {
 				sb.append(Character.toUpperCase(c));
 				capitalizeNext = false;
-			} else {
+			}
+			else {
 				sb.append(c);
 			}
 		}

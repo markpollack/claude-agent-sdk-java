@@ -46,8 +46,7 @@ import java.util.Optional;
  * <li>Permission callbacks for tool authorization</li>
  * </ul>
  *
- * <h2>Basic Usage - Stream Text</h2>
- * <pre>{@code
+ * <h2>Basic Usage - Stream Text</h2> <pre>{@code
  * ClaudeAsyncClient client = ClaudeClient.async()
  *     .workingDirectory(Path.of("."))
  *     .model("claude-sonnet-4-20250514")
@@ -58,8 +57,7 @@ import java.util.Optional;
  *     .subscribe();
  * }</pre>
  *
- * <h2>Multi-turn Conversation with flatMap Chaining</h2>
- * <pre>{@code
+ * <h2>Multi-turn Conversation with flatMap Chaining</h2> <pre>{@code
  * client.connect("My favorite color is blue.").text()
  *     .doOnSuccess(System.out::println)
  *     .flatMap(r1 -> client.query("What is my favorite color?").text())
@@ -69,8 +67,7 @@ import java.util.Optional;
  *     .subscribe();
  * }</pre>
  *
- * <h2>Full Message Access (20% Use Case)</h2>
- * <pre>{@code
+ * <h2>Full Message Access (20% Use Case)</h2> <pre>{@code
  * client.query("List files").messages()
  *     .doOnNext(msg -> {
  *         if (msg instanceof AssistantMessage am) {
@@ -95,8 +92,8 @@ public interface ClaudeAsyncClient {
 	 * Specification for handling responses from a single conversation turn.
 	 *
 	 * <p>
-	 * Inspired by Spring WebClient's ResponseSpec pattern, TurnSpec provides
-	 * terminal operations for different use cases:
+	 * Inspired by Spring WebClient's ResponseSpec pattern, TurnSpec provides terminal
+	 * operations for different use cases:
 	 * </p>
 	 * <ul>
 	 * <li>{@link #text()} - Collected text as Mono (for flatMap chaining)</li>
@@ -121,7 +118,6 @@ public interface ClaudeAsyncClient {
 		 *     .flatMap(r -> client.query("Follow up").text())
 		 *     .block();
 		 * }</pre>
-		 *
 		 * @return Mono containing all text from AssistantMessages concatenated
 		 */
 		Mono<String> text();
@@ -130,16 +126,15 @@ public interface ClaudeAsyncClient {
 		 * Returns the text response as a streaming Flux.
 		 *
 		 * <p>
-		 * Use this for SSE endpoints or CLI output where you want to stream
-		 * text as it arrives:
+		 * Use this for SSE endpoints or CLI output where you want to stream text as it
+		 * arrives:
 		 * </p>
 		 * <pre>{@code
-		 * @GetMapping(value = "/chat", produces = TEXT_EVENT_STREAM_VALUE)
+		 * &#64;GetMapping(value = "/chat", produces = TEXT_EVENT_STREAM_VALUE)
 		 * public Flux<String> chat(@RequestParam String message) {
 		 *     return client.query(message).textStream();
 		 * }
 		 * }</pre>
-		 *
 		 * @return Flux of text chunks from AssistantMessages
 		 */
 		Flux<String> textStream();
@@ -160,7 +155,6 @@ public interface ClaudeAsyncClient {
 		 *     })
 		 *     .subscribe();
 		 * }</pre>
-		 *
 		 * @return Flux of all Message types for this turn
 		 */
 		Flux<Message> messages();
@@ -181,11 +175,13 @@ public interface ClaudeAsyncClient {
 	 * Connects to Claude CLI and starts a new session with an initial prompt.
 	 *
 	 * <p>
-	 * Returns a {@link TurnSpec} for handling the response. All operations are lazy -
-	 * the connection and query are triggered on subscription.
+	 * Returns a {@link TurnSpec} for handling the response. All operations are lazy - the
+	 * connection and query are triggered on subscription.
 	 * </p>
 	 *
-	 * <p>Example:</p>
+	 * <p>
+	 * Example:
+	 * </p>
 	 * <pre>{@code
 	 * // Get text response
 	 * String answer = client.connect("What is 2+2?").text().block();
@@ -200,7 +196,6 @@ public interface ClaudeAsyncClient {
 	 *     .flatMap(r -> client.query("What is it?").text())
 	 *     .block();
 	 * }</pre>
-	 *
 	 * @param initialPrompt the initial prompt to send
 	 * @return TurnSpec for handling the response
 	 */
@@ -220,11 +215,13 @@ public interface ClaudeAsyncClient {
 	 * Sends a query to Claude and returns a spec for handling the response.
 	 *
 	 * <p>
-	 * Returns a {@link TurnSpec} for handling the response. All operations are lazy -
-	 * the query is triggered on subscription. Must be connected first.
+	 * Returns a {@link TurnSpec} for handling the response. All operations are lazy - the
+	 * query is triggered on subscription. Must be connected first.
 	 * </p>
 	 *
-	 * <p>Example:</p>
+	 * <p>
+	 * Example:
+	 * </p>
 	 * <pre>{@code
 	 * // Get text response
 	 * String answer = client.query("What is 2+2?").text().block();
@@ -239,7 +236,6 @@ public interface ClaudeAsyncClient {
 	 *     .flatMap(r -> client.query("What is it?").text())
 	 *     .block();
 	 * }</pre>
-	 *
 	 * @param prompt the prompt to send
 	 * @return TurnSpec for handling the response
 	 */
@@ -260,8 +256,8 @@ public interface ClaudeAsyncClient {
 	 * Receives response messages, returning only regular messages (not control messages).
 	 *
 	 * <p>
-	 * This is a convenience method that filters to regular messages and converts them
-	 * to the {@link Message} type.
+	 * This is a convenience method that filters to regular messages and converts them to
+	 * the {@link Message} type.
 	 * </p>
 	 * @return Flux of messages
 	 */
@@ -273,7 +269,6 @@ public interface ClaudeAsyncClient {
 	 * <p>
 	 * Equivalent to {@code client.query(prompt).messages()}.
 	 * </p>
-	 *
 	 * @param prompt the query to send
 	 * @return Flux of messages for this turn, completing at ResultMessage
 	 * @deprecated Use {@code query(prompt).messages()} instead for clearer intent
@@ -289,7 +284,6 @@ public interface ClaudeAsyncClient {
 	 * <p>
 	 * Equivalent to {@code client.connect(prompt).messages()}.
 	 * </p>
-	 *
 	 * @param prompt the initial prompt
 	 * @return Flux of messages for this turn
 	 * @deprecated Use {@code connect(prompt).messages()} instead for clearer intent
@@ -305,7 +299,6 @@ public interface ClaudeAsyncClient {
 	 * <p>
 	 * Equivalent to {@code client.connect(prompt).textStream()}.
 	 * </p>
-	 *
 	 * @param prompt the initial prompt
 	 * @return Flux of text chunks from AssistantMessages
 	 * @deprecated Use {@code connect(prompt).textStream()} instead for clearer intent
@@ -321,7 +314,6 @@ public interface ClaudeAsyncClient {
 	 * <p>
 	 * Equivalent to {@code client.query(prompt).textStream()}.
 	 * </p>
-	 *
 	 * @param prompt the query to send
 	 * @return Flux of text chunks from AssistantMessages
 	 * @deprecated Use {@code query(prompt).textStream()} instead for clearer intent
@@ -343,7 +335,8 @@ public interface ClaudeAsyncClient {
 
 	/**
 	 * Sets the permission mode for tool execution.
-	 * @param mode the permission mode (e.g., "default", "acceptEdits", "bypassPermissions")
+	 * @param mode the permission mode (e.g., "default", "acceptEdits",
+	 * "bypassPermissions")
 	 * @return Mono that completes when the mode has been set
 	 */
 	Mono<Void> setPermissionMode(String mode);
@@ -389,15 +382,14 @@ public interface ClaudeAsyncClient {
 	 * Registers a handler that receives all messages across all turns.
 	 *
 	 * <p>
-	 * Use handlers for cross-turn concerns like logging, metrics, or tracing.
-	 * For per-turn processing, use the Flux from {@link #receiveResponse()} instead.
+	 * Use handlers for cross-turn concerns like logging, metrics, or tracing. For
+	 * per-turn processing, use the Flux from {@link #receiveResponse()} instead.
 	 * </p>
 	 *
 	 * <p>
 	 * Handlers are called synchronously before messages are emitted to the turn sink.
 	 * Keep handler logic fast to avoid blocking message processing.
 	 * </p>
-	 *
 	 * @param handler the handler to receive messages
 	 * @return this client for fluent chaining
 	 */
@@ -407,10 +399,9 @@ public interface ClaudeAsyncClient {
 	 * Registers a handler that receives result messages across all turns.
 	 *
 	 * <p>
-	 * Result messages indicate the end of a turn and contain usage/cost metadata.
-	 * Use this for tracking conversation statistics or triggering end-of-turn actions.
+	 * Result messages indicate the end of a turn and contain usage/cost metadata. Use
+	 * this for tracking conversation statistics or triggering end-of-turn actions.
 	 * </p>
-	 *
 	 * @param handler the handler to receive result messages
 	 * @return this client for fluent chaining
 	 */

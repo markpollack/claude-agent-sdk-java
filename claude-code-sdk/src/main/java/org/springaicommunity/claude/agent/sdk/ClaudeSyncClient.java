@@ -186,8 +186,8 @@ public interface ClaudeSyncClient extends AutoCloseable {
 	String connectText(String prompt);
 
 	/**
-	 * Sends a query and returns just the text response. Use this for follow-up
-	 * questions when you only need the text content.
+	 * Sends a query and returns just the text response. Use this for follow-up questions
+	 * when you only need the text content.
 	 *
 	 * <p>
 	 * Example:
@@ -318,8 +318,8 @@ public interface ClaudeSyncClient extends AutoCloseable {
 	boolean isConnected();
 
 	/**
-	 * Disconnects the client and releases resources. This is an alias for {@link #close()}
-	 * for API clarity.
+	 * Disconnects the client and releases resources. This is an alias for
+	 * {@link #close()} for API clarity.
 	 */
 	void disconnect();
 

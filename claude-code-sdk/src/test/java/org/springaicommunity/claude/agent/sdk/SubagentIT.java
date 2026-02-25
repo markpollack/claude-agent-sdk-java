@@ -36,11 +36,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests for the Task tool with --agents parameter (subagent spawning).
  *
- * <p>These tests verify that:</p>
+ * <p>
+ * These tests verify that:
+ * </p>
  * <ul>
- *   <li>The --agents flag is correctly passed to the CLI</li>
- *   <li>The Task tool can spawn subagents with defined configurations</li>
- *   <li>Subagent responses are captured in the conversation</li>
+ * <li>The --agents flag is correctly passed to the CLI</li>
+ * <li>The Task tool can spawn subagents with defined configurations</li>
+ * <li>Subagent responses are captured in the conversation</li>
  * </ul>
  */
 class SubagentIT extends ClaudeCliTestBase {
@@ -48,19 +50,19 @@ class SubagentIT extends ClaudeCliTestBase {
 	private static final String HAIKU_MODEL = CLIOptions.MODEL_HAIKU;
 
 	/**
-	 * JSON definition for a simple test agent.
-	 * The agent is restricted to no tools and just responds to queries.
+	 * JSON definition for a simple test agent. The agent is restricted to no tools and
+	 * just responds to queries.
 	 */
 	private static final String TEST_AGENTS_JSON = """
-		{
-			"test-helper": {
-				"description": "A simple helper agent for testing",
-				"tools": [],
-				"prompt": "You are a test helper. When asked, respond with exactly: TEST_RESPONSE_OK",
-				"model": "claude-haiku-4-5-20251001"
+			{
+				"test-helper": {
+					"description": "A simple helper agent for testing",
+					"tools": [],
+					"prompt": "You are a test helper. When asked, respond with exactly: TEST_RESPONSE_OK",
+					"model": "claude-haiku-4-5-20251001"
+				}
 			}
-		}
-		""";
+			""";
 
 	@Test
 	@DisplayName("Should pass --agents flag to CLI and spawn subagent via Task tool")
@@ -69,9 +71,10 @@ class SubagentIT extends ClaudeCliTestBase {
 		CLIOptions options = CLIOptions.builder()
 			.model(HAIKU_MODEL)
 			.agents(TEST_AGENTS_JSON)
-			.allowedTools(List.of("Task"))  // Only allow Task tool
+			.allowedTools(List.of("Task")) // Only allow Task tool
 			.permissionMode(PermissionMode.BYPASS_PERMISSIONS)
-			.systemPrompt("You are an orchestrator. Use the test-helper agent via Task tool to get a response. Report what the agent said.")
+			.systemPrompt(
+					"You are an orchestrator. Use the test-helper agent via Task tool to get a response. Report what the agent said.")
 			.build();
 
 		try (ClaudeSyncClient client = ClaudeClient.sync(options)
@@ -104,10 +107,10 @@ class SubagentIT extends ClaudeCliTestBase {
 			assertThat(messages).anyMatch(m -> m instanceof ResultMessage);
 
 			// The response should indicate the Task tool was used or mention the subagent
-			// Note: The exact response depends on whether Claude decides to use the Task tool
+			// Note: The exact response depends on whether Claude decides to use the Task
+			// tool
 			String text = responseText.toString().toLowerCase();
-			assertThat(text).as("Should have some response from orchestrator")
-				.isNotBlank();
+			assertThat(text).as("Should have some response from orchestrator").isNotBlank();
 		}
 	}
 

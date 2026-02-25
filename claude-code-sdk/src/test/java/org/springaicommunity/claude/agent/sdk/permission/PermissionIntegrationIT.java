@@ -94,8 +94,10 @@ class PermissionIntegrationIT extends ClaudeCliTestBase {
 		List<String> callbackInvocations = new CopyOnWriteArrayList<>();
 		CountDownLatch resultLatch = new CountDownLatch(1);
 
-		// NOTE: permissionPromptToolName("stdio") is required to enable can_use_tool requests
-		// This tells the CLI to send permission requests via stdin/stdout control protocol
+		// NOTE: permissionPromptToolName("stdio") is required to enable can_use_tool
+		// requests
+		// This tells the CLI to send permission requests via stdin/stdout control
+		// protocol
 		CLIOptions options = CLIOptions.builder()
 			.model(HAIKU_MODEL)
 			.permissionMode(PermissionMode.DEFAULT)
@@ -367,9 +369,9 @@ class PermissionIntegrationIT extends ClaudeCliTestBase {
 	}
 
 	/**
-	 * Tests that toolPermissionCallback auto-enables --permission-prompt-tool stdio.
-	 * This matches Python SDK behavior where can_use_tool callback automatically
-	 * sets permission_prompt_tool_name="stdio".
+	 * Tests that toolPermissionCallback auto-enables --permission-prompt-tool stdio. This
+	 * matches Python SDK behavior where can_use_tool callback automatically sets
+	 * permission_prompt_tool_name="stdio".
 	 */
 	@Test
 	@DisplayName("ToolPermissionCallback auto-enables permission prompt tool")
@@ -385,8 +387,8 @@ class PermissionIntegrationIT extends ClaudeCliTestBase {
 			.toolPermissionCallback((toolName, input, context) -> {
 				System.out.println("ToolPermissionCallback invoked for: " + toolName);
 				callbackInvocations.add(toolName);
-				return java.util.concurrent.CompletableFuture.completedFuture(
-					ToolPermissionCallback.ToolPermissionResult.allow());
+				return java.util.concurrent.CompletableFuture
+					.completedFuture(ToolPermissionCallback.ToolPermissionResult.allow());
 			})
 			.build();
 
@@ -397,7 +399,8 @@ class PermissionIntegrationIT extends ClaudeCliTestBase {
 					resultLatch.countDown();
 				}
 			}, request -> {
-				// Handle control requests - the transport should invoke toolPermissionCallback
+				// Handle control requests - the transport should invoke
+				// toolPermissionCallback
 				// for can_use_tool requests automatically
 				if (request.request() instanceof ControlRequest.CanUseToolRequest canUseTool) {
 					// Let the transport's handleCanUseTool method handle this

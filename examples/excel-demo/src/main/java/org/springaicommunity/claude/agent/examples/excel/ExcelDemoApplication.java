@@ -9,15 +9,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * Excel Demo Application - AI-powered spreadsheet creation using Vaadin + Claude SDK.
  *
- * <p>This Spring Boot application demonstrates:
+ * <p>
+ * This Spring Boot application demonstrates:
  * <ul>
- *   <li>Streaming responses from Claude to Vaadin UI</li>
- *   <li>Thread-safe UI updates using ui.access()</li>
- *   <li>Excel file generation with Apache POI</li>
+ * <li>Streaming responses from Claude to Vaadin UI</li>
+ * <li>Thread-safe UI updates using ui.access()</li>
+ * <li>Excel file generation with Apache POI</li>
  * </ul>
  */
 @SpringBootApplication
-@Push  // Enable server-push for real-time streaming updates
+@Push // Enable server-push for real-time streaming updates
 public class ExcelDemoApplication implements AppShellConfigurator {
 
 	public static void main(String[] args) {

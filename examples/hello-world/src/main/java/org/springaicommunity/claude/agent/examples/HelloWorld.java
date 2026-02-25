@@ -173,7 +173,7 @@ public class HelloWorld {
 			try (ClaudeSyncClient syncClient = ClaudeClient.sync()
 				.workingDirectory(Path.of(System.getProperty("user.dir")))
 				.model(CLIOptions.MODEL_HAIKU)
-				.permissionMode(PermissionMode.DEFAULT)  // Required for hooks
+				.permissionMode(PermissionMode.DEFAULT) // Required for hooks
 				.hookRegistry(hookRegistry)
 				.timeout(Duration.ofMinutes(2))
 				.build()) {

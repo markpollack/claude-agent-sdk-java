@@ -32,8 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for HelloWorld example patterns.
- * These tests verify SDK configuration without requiring the actual CLI.
+ * Unit tests for HelloWorld example patterns. These tests verify SDK configuration
+ * without requiring the actual CLI.
  */
 class HelloWorldTest {
 
@@ -44,9 +44,7 @@ class HelloWorldTest {
 		@Test
 		@DisplayName("Should build with system prompt")
 		void buildWithSystemPrompt() {
-			QueryOptions options = QueryOptions.builder()
-				.appendSystemPrompt("Be concise")
-				.build();
+			QueryOptions options = QueryOptions.builder().appendSystemPrompt("Be concise").build();
 
 			assertThat(options.appendSystemPrompt()).isEqualTo("Be concise");
 		}
@@ -54,9 +52,7 @@ class HelloWorldTest {
 		@Test
 		@DisplayName("Should build with model")
 		void buildWithModel() {
-			QueryOptions options = QueryOptions.builder()
-				.model("haiku")
-				.build();
+			QueryOptions options = QueryOptions.builder().model("haiku").build();
 
 			assertThat(options.model()).isEqualTo("haiku");
 		}
@@ -64,9 +60,7 @@ class HelloWorldTest {
 		@Test
 		@DisplayName("Should build with allowed tools")
 		void buildWithAllowedTools() {
-			QueryOptions options = QueryOptions.builder()
-				.allowedTools(List.of("Read", "Write"))
-				.build();
+			QueryOptions options = QueryOptions.builder().allowedTools(List.of("Read", "Write")).build();
 
 			assertThat(options.allowedTools()).containsExactly("Read", "Write");
 		}
@@ -80,9 +74,7 @@ class HelloWorldTest {
 		@Test
 		@DisplayName("Should build with model constant")
 		void buildWithModelConstant() {
-			CLIOptions options = CLIOptions.builder()
-				.model(CLIOptions.MODEL_HAIKU)
-				.build();
+			CLIOptions options = CLIOptions.builder().model(CLIOptions.MODEL_HAIKU).build();
 
 			assertThat(options.model()).isEqualTo("claude-haiku-4-5-20251001");
 		}
@@ -90,9 +82,7 @@ class HelloWorldTest {
 		@Test
 		@DisplayName("Should build with permission mode")
 		void buildWithPermissionMode() {
-			CLIOptions options = CLIOptions.builder()
-				.permissionMode(PermissionMode.DEFAULT)
-				.build();
+			CLIOptions options = CLIOptions.builder().permissionMode(PermissionMode.DEFAULT).build();
 
 			assertThat(options.permissionMode()).isEqualTo(PermissionMode.DEFAULT);
 		}
@@ -100,9 +90,7 @@ class HelloWorldTest {
 		@Test
 		@DisplayName("Should build with bypass permissions mode")
 		void buildWithBypassPermissions() {
-			CLIOptions options = CLIOptions.builder()
-				.permissionMode(PermissionMode.BYPASS_PERMISSIONS)
-				.build();
+			CLIOptions options = CLIOptions.builder().permissionMode(PermissionMode.BYPASS_PERMISSIONS).build();
 
 			assertThat(options.permissionMode()).isEqualTo(PermissionMode.BYPASS_PERMISSIONS);
 		}

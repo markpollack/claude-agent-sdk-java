@@ -66,7 +66,8 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		if (timeout == null) {
 			timeout = Duration.ofMinutes(2);
 		}
-		// tools can be null (don't add --tools flag), empty list (--tools ""), or list of tool names
+		// tools can be null (don't add --tools flag), empty list (--tools ""), or list of
+		// tool names
 		if (allowedTools == null) {
 			allowedTools = List.of();
 		}
@@ -261,7 +262,8 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 
 		private Duration timeout = Duration.ofMinutes(2);
 
-		private List<String> tools; // null = don't add --tools, empty = --tools "", non-empty = --tools "Read,Edit"
+		private List<String> tools; // null = don't add --tools, empty = --tools "",
+									// non-empty = --tools "Read,Edit"
 
 		private List<String> allowedTools = List.of();
 
@@ -346,7 +348,8 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		/**
 		 * Sets the base set of tools available. This is different from allowedTools which
 		 * filters the available tools.
-		 * @param tools list of tool names, empty list for no tools, or null to use defaults
+		 * @param tools list of tool names, empty list for no tools, or null to use
+		 * defaults
 		 * @return this builder
 		 */
 		public Builder tools(List<String> tools) {
