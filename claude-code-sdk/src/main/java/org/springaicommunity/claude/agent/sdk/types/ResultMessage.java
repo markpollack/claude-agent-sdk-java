@@ -86,8 +86,10 @@ public record ResultMessage(@JsonProperty("subtype") String subtype,
 		int inputTokens = getIntFromUsage("input_tokens", 0);
 		int outputTokens = getIntFromUsage("output_tokens", 0);
 		int thinkingTokens = getIntFromUsage("thinking_tokens", 0);
+		int cacheCreationInputTokens = getIntFromUsage("cache_creation_input_tokens", 0);
+		int cacheReadInputTokens = getIntFromUsage("cache_read_input_tokens", 0);
 
-		return new Usage(inputTokens, outputTokens, thinkingTokens);
+		return new Usage(inputTokens, outputTokens, thinkingTokens, cacheCreationInputTokens, cacheReadInputTokens);
 	}
 
 	private Cost extractCost(String model, Usage usageObj) {

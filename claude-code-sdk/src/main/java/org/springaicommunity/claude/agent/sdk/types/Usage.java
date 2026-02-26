@@ -21,25 +21,54 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * Token usage metrics and analytics. Provides rich behavior for usage analysis and
  * monitoring.
+ * <p>
+ * The Claude API reports input tokens across three categories:
+ * <ul>
+ * <li>{@code inputTokens} — tokens sent directly (non-cached)</li>
+ * <li>{@code cacheCreationInputTokens} — tokens written to prompt cache</li>
+ * <li>{@code cacheReadInputTokens} — tokens read from prompt cache</li>
+ * </ul>
+ * Use {@link #getTotalInputTokens()} for the full input token count.
  */
 public record Usage(@JsonProperty("input_tokens") int inputTokens,
 
 		@JsonProperty("output_tokens") int outputTokens,
 
-		@JsonProperty("thinking_tokens") int thinkingTokens) {
+		@JsonProperty("thinking_tokens") int thinkingTokens,
+
+		@JsonProperty("cache_creation_input_tokens") int cacheCreationInputTokens,
+
+		@JsonProperty("cache_read_input_tokens") int cacheReadInputTokens) {
 
 	/**
-	 * Gets the total number of tokens used.
+	 * Backward-compatible constructor for callers that don't provide cache token
+	 * counts.
 	 */
-	public int getTotalTokens() {
-		return inputTokens + outputTokens + thinkingTokens;
+	public Usage(int inputTokens, int outputTokens, int thinkingTokens) {
+		this(inputTokens, outputTokens, thinkingTokens, 0, 0);
 	}
 
 	/**
-	 * Gets the compression ratio (output tokens / input tokens).
+	 * Gets the total input tokens including cached tokens. This is the actual number
+	 * of input tokens consumed by the API call.
+	 */
+	public int getTotalInputTokens() {
+		return inputTokens + cacheCreationInputTokens + cacheReadInputTokens;
+	}
+
+	/**
+	 * Gets the total number of tokens used (input + output + thinking).
+	 */
+	public int getTotalTokens() {
+		return getTotalInputTokens() + outputTokens + thinkingTokens;
+	}
+
+	/**
+	 * Gets the compression ratio (output tokens / total input tokens).
 	 */
 	public double getCompressionRatio() {
-		return inputTokens > 0 ? (double) outputTokens / inputTokens : 0;
+		int totalInput = getTotalInputTokens();
+		return totalInput > 0 ? (double) outputTokens / totalInput : 0;
 	}
 
 	/**
@@ -62,7 +91,7 @@ public record Usage(@JsonProperty("input_tokens") int inputTokens,
 	 */
 	public double getInputTokenPercentage() {
 		int total = getTotalTokens();
-		return total > 0 ? (double) inputTokens / total * 100 : 0;
+		return total > 0 ? (double) getTotalInputTokens() / total * 100 : 0;
 	}
 
 	/**
@@ -71,6 +100,14 @@ public record Usage(@JsonProperty("input_tokens") int inputTokens,
 	public double getOutputTokenPercentage() {
 		int total = getTotalTokens();
 		return total > 0 ? (double) outputTokens / total * 100 : 0;
+	}
+
+	/**
+	 * Gets the cache hit ratio (cache read tokens / total input tokens).
+	 */
+	public double getCacheHitRatio() {
+		int totalInput = getTotalInputTokens();
+		return totalInput > 0 ? (double) cacheReadInputTokens / totalInput : 0;
 	}
 
 	/**
@@ -99,6 +136,10 @@ public record Usage(@JsonProperty("input_tokens") int inputTokens,
 
 		private int thinkingTokens;
 
+		private int cacheCreationInputTokens;
+
+		private int cacheReadInputTokens;
+
 		public Builder inputTokens(int inputTokens) {
 			this.inputTokens = inputTokens;
 			return this;
@@ -114,8 +155,19 @@ public record Usage(@JsonProperty("input_tokens") int inputTokens,
 			return this;
 		}
 
+		public Builder cacheCreationInputTokens(int cacheCreationInputTokens) {
+			this.cacheCreationInputTokens = cacheCreationInputTokens;
+			return this;
+		}
+
+		public Builder cacheReadInputTokens(int cacheReadInputTokens) {
+			this.cacheReadInputTokens = cacheReadInputTokens;
+			return this;
+		}
+
 		public Usage build() {
-			return new Usage(inputTokens, outputTokens, thinkingTokens);
+			return new Usage(inputTokens, outputTokens, thinkingTokens, cacheCreationInputTokens,
+					cacheReadInputTokens);
 		}
 
 	}
