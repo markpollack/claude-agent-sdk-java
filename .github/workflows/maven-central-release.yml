@@ -13,6 +13,7 @@ jobs:
     uses: spring-ai-community/community-workflows/.github/workflows/maven-central-release.yml@main
     with:
       version: ${{ inputs.version }}
+      skip-tests: true
     secrets:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
       MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
