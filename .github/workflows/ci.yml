@@ -11,3 +11,6 @@ jobs:
     uses: markpollack/build-tools/.github/workflows/ci-build.yml@main
     with:
       java-version: '21'
+      agent-clis: 'claude'
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
