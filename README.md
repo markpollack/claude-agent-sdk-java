@@ -15,7 +15,7 @@ Java SDK for interacting with [Claude Code CLI](https://docs.anthropic.com/en/do
 
 ## Documentation
 
-- **[Tutorial](https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/index)** — Step-by-step guide covering all SDK features
+- **[Tutorial](https://lab.pollack.ai/claude-agent-sdk/tutorial/index)** — Step-by-step guide covering all SDK features
 - **[Tutorial Source Code](https://github.com/markpollack/claude-agent-sdk-java-tutorial)** — Runnable examples for each tutorial module
 
 The tutorial covers:
@@ -322,7 +322,7 @@ ClaudeSyncClient client = ClaudeClient.sync(options)
 claude-agent-sdk-java/
 ├── claude-code-sdk/          # Core SDK module
 │   └── src/
-│       ├── main/java/org/springaicommunity/claude/agent/sdk/
+│       ├── main/java/io/github/markpollack/claude/agent/sdk/
 │       │   ├── Query.java              # Simple one-shot API
 │       │   ├── ClaudeClient.java       # Factory: sync() / async()
 │       │   ├── ClaudeSyncClient.java   # Blocking client interface
