@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springaicommunity</groupId>
+        <groupId>io.github.markpollack</groupId>
         <artifactId>examples-parent</artifactId>
         <version>1.0.0</version>
         <relativePath>../pom.xml</relativePath>
@@ -19,7 +19,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.springaicommunity</groupId>
+            <groupId>io.github.markpollack</groupId>
             <artifactId>claude-code-sdk</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -68,7 +68,7 @@
                     <arguments>
                         <argument>-classpath</argument>
                         <classpath/>
-                        <argument>org.springaicommunity.claude.agent.examples.HelloWorld</argument>
+                        <argument>io.github.markpollack.claude.agent.examples.HelloWorld</argument>
                     </arguments>
                 </configuration>
             </plugin>

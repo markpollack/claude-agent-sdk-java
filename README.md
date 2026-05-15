@@ -16,7 +16,7 @@ Java SDK for interacting with [Claude Code CLI](https://docs.anthropic.com/en/do
 ## Documentation
 
 - **[Tutorial](https://springaicommunity.mintlify.app/claude-agent-sdk/tutorial/index)** — Step-by-step guide covering all SDK features
-- **[Tutorial Source Code](https://github.com/spring-ai-community/claude-agent-sdk-java-tutorial)** — Runnable examples for each tutorial module
+- **[Tutorial Source Code](https://github.com/markpollack/claude-agent-sdk-java-tutorial)** — Runnable examples for each tutorial module
 
 The tutorial covers:
 
@@ -35,13 +35,13 @@ Each module is a standalone runnable example with integration tests.
 
 ## Installation
 
-> **Available on Maven Central** — [view on Maven Central](https://central.sonatype.com/artifact/org.springaicommunity/claude-code-sdk)
+> **Available on Maven Central** — [view on Maven Central](https://central.sonatype.com/artifact/io.github.markpollack/claude-code-sdk)
 
 ### Maven
 
 ```xml
 <dependency>
-    <groupId>org.springaicommunity</groupId>
+    <groupId>io.github.markpollack</groupId>
     <artifactId>claude-code-sdk</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -51,14 +51,14 @@ Each module is a standalone runnable example with integration tests.
 
 ```groovy
 dependencies {
-    implementation 'org.springaicommunity:claude-code-sdk:1.0.0'
+    implementation 'io.github.markpollack:claude-code-sdk:1.0.0'
 }
 ```
 
 ### Building from Source
 
 ```bash
-git clone https://github.com/spring-ai-community/claude-agent-sdk-java.git
+git clone https://github.com/markpollack/claude-agent-sdk-java.git
 cd claude-agent-sdk-java
 ./mvnw install
 ```
@@ -150,7 +150,7 @@ Both `ClaudeSyncClient` and `ClaudeAsyncClient` support the full feature set: mu
 The simplest way to use Claude - one line of code:
 
 ```java
-import org.springaicommunity.claude.agent.sdk.Query;
+import io.github.markpollack.claude.agent.sdk.Query;
 
 String answer = Query.text("What is 2+2?");
 System.out.println(answer);  // "4"
@@ -183,8 +183,8 @@ System.out.println("Duration: " + result.metadata().getDuration().toMillis() + "
 For multi-turn conversations, hooks, and MCP servers:
 
 ```java
-import org.springaicommunity.claude.agent.sdk.ClaudeClient;
-import org.springaicommunity.claude.agent.sdk.ClaudeSyncClient;
+import io.github.markpollack.claude.agent.sdk.ClaudeClient;
+import io.github.markpollack.claude.agent.sdk.ClaudeSyncClient;
 
 try (ClaudeSyncClient client = ClaudeClient.sync()
         .workingDirectory(Path.of("."))

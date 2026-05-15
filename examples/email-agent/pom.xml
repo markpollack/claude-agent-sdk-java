@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>org.springaicommunity</groupId>
+    <groupId>io.github.markpollack</groupId>
     <artifactId>email-agent</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
@@ -46,7 +46,7 @@
     <dependencies>
         <!-- Claude Agent SDK -->
         <dependency>
-            <groupId>org.springaicommunity</groupId>
+            <groupId>io.github.markpollack</groupId>
             <artifactId>claude-code-sdk</artifactId>
             <version>${project.version}</version>
         </dependency>

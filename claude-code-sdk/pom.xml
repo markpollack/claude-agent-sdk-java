@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springaicommunity</groupId>
+        <groupId>io.github.markpollack</groupId>
         <artifactId>claude-agent-sdk-parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -16,12 +16,12 @@
 
     <name>Claude Code SDK</name>
     <description>Java SDK for interacting with Claude Code CLI - Low-level binding with resilience features</description>
-    <url>https://github.com/spring-ai-community/claude-agent-sdk-java</url>
+    <url>https://github.com/markpollack/claude-agent-sdk-java</url>
 
     <scm>
-        <url>https://github.com/spring-ai-community/claude-agent-sdk-java</url>
-        <connection>git://github.com/spring-ai-community/claude-agent-sdk-java.git</connection>
-        <developerConnection>git@github.com:spring-ai-community/claude-agent-sdk-java.git</developerConnection>
+        <url>https://github.com/markpollack/claude-agent-sdk-java</url>
+        <connection>scm:git:git://github.com/markpollack/claude-agent-sdk-java.git</connection>
+        <developerConnection>scm:git:ssh://github.com:markpollack/claude-agent-sdk-java.git</developerConnection>
     </scm>
 
     <dependencies>

@@ -4,25 +4,25 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.springaicommunity</groupId>
+    <groupId>io.github.markpollack</groupId>
     <artifactId>claude-agent-sdk-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
 
     <name>Claude Agent SDK Parent</name>
 
     <description>Java SDK for interacting with Claude Code CLI</description>
 
-    <url>https://github.com/spring-ai-community/claude-agent-sdk-java</url>
+    <url>https://github.com/markpollack/claude-agent-sdk-java</url>
 
     <scm>
-        <url>https://github.com/spring-ai-community/claude-agent-sdk-java</url>
-        <connection>git://github.com/spring-ai-community/claude-agent-sdk-java.git</connection>
-        <developerConnection>git@github.com:spring-ai-community/claude-agent-sdk-java.git</developerConnection>
+        <url>https://github.com/markpollack/claude-agent-sdk-java</url>
+        <connection>scm:git:git://github.com/markpollack/claude-agent-sdk-java.git</connection>
+        <developerConnection>scm:git:ssh://github.com:markpollack/claude-agent-sdk-java.git</developerConnection>
     </scm>
 
     <organization>
-        <name>Spring AI Community</name>
-        <url>https://github.com/spring-ai-community</url>
+        <name>Mark Pollack</name>
+        <url>https://github.com/markpollack</url>
     </organization>
 
     <licenses>
@@ -40,18 +40,18 @@
 
     <issueManagement>
         <system>Github Issues</system>
-        <url>https://github.com/spring-ai-community/claude-agent-sdk-java/issues</url>
+        <url>https://github.com/markpollack/claude-agent-sdk-java/issues</url>
     </issueManagement>
     <ciManagement>
         <system>Github Actions</system>
-        <url>https://github.com/spring-ai-community/claude-agent-sdk-java/actions</url>
+        <url>https://github.com/markpollack/claude-agent-sdk-java/actions</url>
     </ciManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
 
