@@ -127,9 +127,16 @@ public class RobustStreamParser {
 			// Attempt to parse accumulated JSON
 			Message message = messageParser.parseMessage(json);
 
-			// Success: clear buffer and return message (Python SDK pattern)
+			// Clear buffer regardless — valid JSON was parsed
 			jsonBuffer.setLength(0);
 			successfulParses++;
+
+			// Unknown message types return null — skip silently
+			if (message == null) {
+				logger.debug("Skipping unrecognized message type (parse attempts: {}/{})", successfulParses,
+						parseAttempts);
+				return Optional.empty();
+			}
 
 			logger.debug("Successfully parsed message type: {} (parse attempts: {}/{})",
 					message.getClass().getSimpleName(), successfulParses, parseAttempts);

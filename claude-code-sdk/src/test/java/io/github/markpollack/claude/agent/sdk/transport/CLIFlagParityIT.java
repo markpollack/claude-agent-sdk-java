@@ -87,7 +87,22 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 			"betas",
 
 			// Always added by SDK automatically
-			"verbose");
+			"verbose",
+
+			// New CLI flags — passable via extraArgs, first-class builder support TBD
+			"effort", // --effort <level> thinking effort (low/medium/high/max)
+			"bare", // --bare minimal mode (skip hooks, LSP, etc.)
+			"name", "n", // --name / -n session display name
+			"worktree", "w", // --worktree / -w git worktree creation
+			"brief", // --brief enables SendUserMessage tool
+			"include-hook-events", // --include-hook-events hook lifecycle in stream
+			"file", // --file <specs...> file resources at startup
+			"exclude-dynamic-system-prompt-sections", // prompt cache optimization
+			"debug-file", // --debug-file <path> debug log output
+			"from-pr", // --from-pr resume session from PR
+			"remote-control-session-name-prefix", // internal session naming
+			"tmux" // --tmux requires worktree, interactive use
+	);
 
 	/**
 	 * Mapping from CLI flag names to CLIOptions builder method names. Only needed when
