@@ -432,6 +432,17 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 	}
 
 	private void handleMessage(ParsedMessage message) {
+		// Detect session-end signal from transport (process exited, stream closed)
+		if (message instanceof ParsedMessage.EndOfStream) {
+			logger.debug("Session ended — completing message receivers");
+			if (messageIterator != null) {
+				messageIterator.complete();
+			}
+			if (blockingReceiver != null) {
+				blockingReceiver.complete();
+			}
+			return;
+		}
 		// Forward regular messages to both receivers
 		if (message.isRegularMessage()) {
 			messageIterator.offer(message);

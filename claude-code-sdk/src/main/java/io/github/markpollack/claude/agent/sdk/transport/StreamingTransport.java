@@ -814,6 +814,14 @@ public class StreamingTransport implements AutoCloseable {
 			logger.debug("processInboundMessages finally block, setting isClosing=true");
 			isClosing = true;
 			inboundSink.tryEmitComplete();
+			// Signal the message handler that the session has ended so iterators
+			// stop polling immediately, rather than waiting for close() to be called.
+			try {
+				messageHandler.accept(ParsedMessage.EndOfStream.INSTANCE);
+			}
+			catch (Exception e) {
+				logger.debug("Error signaling session end to message handler", e);
+			}
 		}
 	}
 
@@ -1113,10 +1121,10 @@ public class StreamingTransport implements AutoCloseable {
 			// Close transport resources
 			closeStreams();
 
-			// Terminate process gracefully
+			// Terminate process tree gracefully
 			if (process != null) {
-				process.destroy();
-				return Mono.fromFuture(process.onExit()).then();
+				destroyProcessTree(process);
+				return Mono.empty();
 			}
 			return Mono.empty();
 		})).then(Mono.<Void>fromRunnable(() -> {
@@ -1153,18 +1161,9 @@ public class StreamingTransport implements AutoCloseable {
 		// Close streams
 		closeStreams();
 
-		// Terminate process
+		// Terminate process tree — child processes may hold pipes open
 		if (process != null) {
-			process.destroy();
-			try {
-				if (!process.waitFor(5, TimeUnit.SECONDS)) {
-					process.destroyForcibly();
-				}
-			}
-			catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				process.destroyForcibly();
-			}
+			destroyProcessTree(process);
 		}
 
 		// Clean up MCP config temp file
@@ -1186,6 +1185,43 @@ public class StreamingTransport implements AutoCloseable {
 
 		state.set(STATE_CLOSED);
 		logger.debug("StreamingTransport closed");
+	}
+
+	/**
+	 * Destroys the CLI process and all its descendant processes. Child processes (e.g.,
+	 * Node.js workers spawned by the CLI) may inherit stdout file descriptors, keeping
+	 * pipes open even after the main process exits. This ensures the entire process tree
+	 * is cleaned up.
+	 */
+	private void destroyProcessTree(Process proc) {
+		// Kill descendants first so they don't hold pipes/resources open
+		try {
+			proc.toHandle().descendants().forEach(ph -> {
+				try {
+					ph.destroy();
+				}
+				catch (Exception e) {
+					logger.debug("Error destroying descendant process (pid={})", ph.pid(), e);
+				}
+			});
+		}
+		catch (Exception e) {
+			logger.debug("Error enumerating descendant processes", e);
+		}
+
+		// Kill the main process
+		proc.destroy();
+		try {
+			if (!proc.waitFor(5, TimeUnit.SECONDS)) {
+				logger.debug("Process did not exit within 5s, destroying forcibly");
+				proc.destroyForcibly();
+				proc.waitFor(2, TimeUnit.SECONDS);
+			}
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			proc.destroyForcibly();
+		}
 	}
 
 	private void closeStreams() {
