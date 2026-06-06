@@ -165,7 +165,7 @@ public class ControlMessageParser {
 			return parseRateLimitEvent(node);
 		}
 		else {
-			return parseRegularMessage(node);
+			return parseRegularMessage(node, originalJson);
 		}
 	}
 
@@ -216,7 +216,8 @@ public class ControlMessageParser {
 	private ParsedMessage parseRateLimitEvent(JsonNode node) throws MessageParseException {
 		try {
 			RateLimitEvent event = objectMapper.treeToValue(node, RateLimitEvent.class);
-			logger.debug("Rate limit event: status={}, type={}, resetsAt={}", event.rateLimitInfo() != null ? event.rateLimitInfo().status() : "unknown",
+			logger.debug("Rate limit event: status={}, type={}, resetsAt={}",
+					event.rateLimitInfo() != null ? event.rateLimitInfo().status() : "unknown",
 					event.rateLimitInfo() != null ? event.rateLimitInfo().rateLimitType() : "unknown",
 					event.rateLimitInfo() != null ? event.rateLimitInfo().resetsAt() : 0);
 			return ParsedMessage.RateLimitEventMessage.of(event);
@@ -228,14 +229,16 @@ public class ControlMessageParser {
 
 	/**
 	 * Parses a regular message from a JsonNode. Returns null if the message type is
-	 * unrecognized (graceful forward-compatibility with newer CLI versions).
+	 * unrecognized (graceful forward-compatibility with newer CLI versions). The raw JSON
+	 * line is retained on the RegularMessage as a lossless escape hatch for wire fields
+	 * not yet modeled by the typed API.
 	 */
-	private ParsedMessage parseRegularMessage(JsonNode node) throws MessageParseException {
+	private ParsedMessage parseRegularMessage(JsonNode node, String originalJson) throws MessageParseException {
 		Message message = messageParser.parseMessageFromNode(node);
 		if (message == null) {
 			return null;
 		}
-		return ParsedMessage.RegularMessage.of(message);
+		return ParsedMessage.RegularMessage.of(message, originalJson);
 	}
 
 	/**

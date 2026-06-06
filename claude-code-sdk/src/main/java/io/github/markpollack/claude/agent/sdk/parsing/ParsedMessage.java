@@ -32,8 +32,8 @@ import io.github.markpollack.claude.agent.sdk.types.control.ControlResponse;
  * <pre>{@code
  * ParsedMessage parsed = parser.parse(json);
  * switch (parsed) {
- *     case ParsedMessage.RegularMessage(var message) -> handleMessage(message);
- *     case ParsedMessage.Control(var request) -> handleControlRequest(request);
+ *     case ParsedMessage.RegularMessage r -> handleMessage(r.message());
+ *     case ParsedMessage.Control c -> handleControlRequest(c.request());
  * }
  * }</pre>
  */
@@ -98,8 +98,16 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 
 	/**
 	 * Wrapper for regular messages (type=user, assistant, system, result).
+	 *
+	 * @param message the typed message
+	 * @param rawJson the raw JSON line this message was parsed from, or null when the
+	 * message was constructed programmatically (e.g. in tests). This is a lossless escape
+	 * hatch for wire fields not yet modeled by the typed API — it is NOT a semantic API
+	 * guarantee, and consumers must not treat raw blobs as the primary interface. The CLI
+	 * wire format evolves; fields recovered from rawJson should be promoted to typed
+	 * accessors once stable.
 	 */
-	record RegularMessage(Message message) implements ParsedMessage {
+	record RegularMessage(Message message, String rawJson) implements ParsedMessage {
 		public RegularMessage {
 			if (message == null) {
 				throw new IllegalArgumentException("message must not be null");
@@ -107,10 +115,25 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 		}
 
 		/**
-		 * Factory method for creating a RegularMessage.
+		 * Creates a RegularMessage without raw JSON (programmatic construction).
+		 */
+		public RegularMessage(Message message) {
+			this(message, null);
+		}
+
+		/**
+		 * Factory method for creating a RegularMessage without raw JSON.
 		 */
 		public static RegularMessage of(Message message) {
-			return new RegularMessage(message);
+			return new RegularMessage(message, null);
+		}
+
+		/**
+		 * Factory method for creating a RegularMessage retaining the raw JSON line it was
+		 * parsed from.
+		 */
+		public static RegularMessage of(Message message, String rawJson) {
+			return new RegularMessage(message, rawJson);
 		}
 	}
 
