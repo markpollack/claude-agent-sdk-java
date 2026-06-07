@@ -16,6 +16,7 @@
 
 package io.github.markpollack.claude.agent.sdk.types.control;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -65,6 +66,7 @@ public sealed interface HookInput {
 	/**
 	 * Input for PreToolUse hook - called before a tool is executed.
 	 */
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	record PreToolUseInput(@JsonProperty("hook_event_name") String hookEventName,
 			@JsonProperty("session_id") String sessionId, @JsonProperty("transcript_path") String transcriptPath,
 			@JsonProperty("cwd") String cwd, @JsonProperty("permission_mode") String permissionModeValue,
@@ -92,6 +94,7 @@ public sealed interface HookInput {
 	/**
 	 * Input for PostToolUse hook - called after a tool is executed.
 	 */
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	record PostToolUseInput(@JsonProperty("hook_event_name") String hookEventName,
 			@JsonProperty("session_id") String sessionId, @JsonProperty("transcript_path") String transcriptPath,
 			@JsonProperty("cwd") String cwd, @JsonProperty("permission_mode") String permissionModeValue,
@@ -108,6 +111,7 @@ public sealed interface HookInput {
 	/**
 	 * Input for UserPromptSubmit hook - called before user prompt is sent.
 	 */
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	record UserPromptSubmitInput(@JsonProperty("hook_event_name") String hookEventName,
 			@JsonProperty("session_id") String sessionId, @JsonProperty("transcript_path") String transcriptPath,
 			@JsonProperty("cwd") String cwd, @JsonProperty("permission_mode") String permissionModeValue,
@@ -122,6 +126,7 @@ public sealed interface HookInput {
 	/**
 	 * Input for Stop hook - called when agent stops.
 	 */
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	record StopInput(@JsonProperty("hook_event_name") String hookEventName,
 			@JsonProperty("session_id") String sessionId, @JsonProperty("transcript_path") String transcriptPath,
 			@JsonProperty("cwd") String cwd, @JsonProperty("permission_mode") String permissionModeValue,
@@ -136,6 +141,7 @@ public sealed interface HookInput {
 	/**
 	 * Input for SubagentStop hook - called when subagent stops.
 	 */
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	record SubagentStopInput(@JsonProperty("hook_event_name") String hookEventName,
 			@JsonProperty("session_id") String sessionId, @JsonProperty("transcript_path") String transcriptPath,
 			@JsonProperty("cwd") String cwd, @JsonProperty("permission_mode") String permissionModeValue,
@@ -150,6 +156,7 @@ public sealed interface HookInput {
 	/**
 	 * Input for PreCompact hook - called before context compaction.
 	 */
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	record PreCompactInput(@JsonProperty("hook_event_name") String hookEventName,
 			@JsonProperty("session_id") String sessionId, @JsonProperty("transcript_path") String transcriptPath,
 			@JsonProperty("cwd") String cwd, @JsonProperty("permission_mode") String permissionModeValue,

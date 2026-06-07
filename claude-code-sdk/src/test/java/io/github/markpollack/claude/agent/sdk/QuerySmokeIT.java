@@ -77,7 +77,11 @@ class QuerySmokeIT extends ClaudeCliTestBase {
 
 		// Test domain-specific methods
 		assertThat(result.getMessageCount()).isGreaterThan(0);
-		assertThat(result.getFirstAssistantResponse()).isPresent();
+		// CLI 2.1.162 thinking mode emits a separate AssistantMessage with only a
+		// redacted ThinkingBlock before the text AssistantMessage; text() aggregates
+		// across all assistant messages, whereas the deprecated getFirstAssistantResponse()
+		// would return empty from the thinking-only first message.
+		assertThat(result.text()).isPresent();
 
 		// Test metadata analysis
 		assertThat(result.metadata().model()).isNotNull();

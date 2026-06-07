@@ -101,7 +101,10 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 			"debug-file", // --debug-file <path> debug log output
 			"from-pr", // --from-pr resume session from PR
 			"remote-control-session-name-prefix", // internal session naming
-			"tmux" // --tmux requires worktree, interactive use
+			"tmux", // --tmux requires worktree, interactive use
+			"remote-control", // --remote-control remote control API (Slack/remote interfaces), not SDK-relevant
+			"plugin-url", // --plugin-url URL-based plugin loading, passable via extraArgs, first-class TBD
+			"prompt-suggestions" // --prompt-suggestions interactive prompt suggestions (interactive UI, not SDK-relevant)
 	);
 
 	/**

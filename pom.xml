@@ -6,7 +6,7 @@
 
     <groupId>io.github.markpollack</groupId>
     <artifactId>claude-agent-sdk-parent</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>1.3.0</version>
 
     <name>Claude Agent SDK Parent</name>
 
@@ -57,9 +57,9 @@
 
         <!-- dependency versions -->
         <zt-exec.version>1.12</zt-exec.version>
-        <jackson.version>2.17.2</jackson.version>
-        <reactor.version>3.6.10</reactor.version>
-        <slf4j.version>2.0.9</slf4j.version>
+        <jackson.version>2.21.2</jackson.version>
+        <reactor.version>3.8.5</reactor.version>
+        <slf4j.version>2.0.17</slf4j.version>
         <mcp.version>0.15.0</mcp.version>
 
         <!-- test dependency versions -->
@@ -97,21 +97,14 @@
                 <version>${zt-exec.version}</version>
             </dependency>
 
-            <!-- JSON processing -->
+            <!-- JSON processing — Jackson BOM import aligns every
+                 com.fasterxml.jackson artifact, including transitives -->
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
-                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
             <!-- Reactive streams -->
