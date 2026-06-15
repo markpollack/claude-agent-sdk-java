@@ -60,7 +60,7 @@
         <jackson.version>2.21.2</jackson.version>
         <reactor.version>3.8.5</reactor.version>
         <slf4j.version>2.0.17</slf4j.version>
-        <mcp.version>0.15.0</mcp.version>
+        <mcp.version>2.0.0</mcp.version>
 
         <!-- test dependency versions -->
         <junit.version>5.10.2</junit.version>
