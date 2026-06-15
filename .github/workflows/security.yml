@@ -1,0 +1,16 @@
+name: Security Scan
+
+# OWASP dependency-check CVE gate (fails on CVSS >= 7.0). Direct-to-main workflow:
+# runs on dependency changes, nightly (newly-disclosed CVEs), and on demand.
+on:
+  push:
+    branches: [main]
+    paths: ['**/pom.xml']
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  scan:
+    uses: markpollack/build-tools/.github/workflows/security-scan.yml@main
+    secrets: inherit
