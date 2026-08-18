@@ -80,6 +80,7 @@
         <maven-deploy-plugin.version>3.1.1</maven-deploy-plugin.version>
         <maven-site-plugin.version>4.0.0-M13</maven-site-plugin.version>
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <spring-javaformat-maven-plugin.version>0.0.43</spring-javaformat-maven-plugin.version>
     </properties>
 
@@ -171,6 +172,26 @@
     </dependencyManagement>
 
     <build>
+        <resources>
+            <!-- Ship the repository's Apache License 2.0 text inside every distributed
+                 archive. Declaring <resources> replaces Maven's default, so
+                 src/main/resources is restored explicitly below. The file is copied
+                 from the repository root, so there is exactly one licence of record
+                 and the embedded copy is byte-identical to it. -->
+            <resource>
+                <directory>${maven.multiModuleProjectDirectory}</directory>
+                <includes>
+                    <include>LICENSE</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -291,7 +312,40 @@
                 <artifactId>maven-deploy-plugin</artifactId>
                 <version>${maven-deploy-plugin.version}</version>
             </plugin>
+            <!-- Place the same root LICENSE into the generated Javadoc output tree so
+                 the Javadoc archive carries it too. maven-javadoc-plugin only copies a
+                 fixed set of resource patterns out of <javadocDirectory>, so the file is
+                 written straight into target/apidocs at prepare-package, before the
+                 javadoc jar is assembled. The binary and sources archives get it from
+                 <resources> above. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven-resources-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>stage-license-for-javadoc</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/apidocs/META-INF</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${maven.multiModuleProjectDirectory}</directory>
+                                    <includes>
+                                        <include>LICENSE</include>
+                                    </includes>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
+
     </build>
 
     <profiles>
