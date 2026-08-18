@@ -127,12 +127,23 @@
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
+                        <configuration>
+                            <!-- Surefire below sets <argLine>${surefireArgLine}</argLine>, which
+                                 overrode JaCoCo's default argLine property. The agent was never
+                                 attached, no jacoco.exec was written, and every report step
+                                 logged "Skipping JaCoCo execution due to missing execution data
+                                 file" — coverage has silently not been measured. -->
+                            <propertyName>surefireArgLine</propertyName>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>prepare-agent-integration</id>
                         <goals>
                             <goal>prepare-agent-integration</goal>
                         </goals>
+                        <configuration>
+                            <propertyName>failsafeArgLine</propertyName>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>report</id>
