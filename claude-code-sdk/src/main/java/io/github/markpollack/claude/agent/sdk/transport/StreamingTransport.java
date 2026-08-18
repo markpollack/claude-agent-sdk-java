@@ -53,6 +53,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Streaming transport for Claude CLI communication. Manages the subprocess lifecycle and
@@ -341,7 +342,14 @@ public class StreamingTransport implements AutoCloseable {
 			// Wrap command with sudo if user is specified (Unix only)
 			command = wrapCommandForUser(command, options.getUser());
 
-			logger.info("Starting bidirectional session: {}", command);
+			// The constructed command carries --system-prompt, --append-system-prompt,
+			// --agents, --settings, --json-schema and --mcp-config values. MCP server
+			// configuration routinely holds API tokens, so the full command line is a
+			// credential and payload disclosure and belongs at DEBUG. INFO gets the
+			// executable and the flag names only.
+			logger.info("Starting bidirectional session: {} [{} args: {}]", command.get(0), command.size() - 1,
+					command.stream().skip(1).filter(a -> a.startsWith("--")).collect(Collectors.joining(" ")));
+			logger.debug("Bidirectional session command: {}", command);
 
 			// Build environment variables with MCP-style safe filtering
 			Map<String, String> env = buildProcessEnvironment(options);

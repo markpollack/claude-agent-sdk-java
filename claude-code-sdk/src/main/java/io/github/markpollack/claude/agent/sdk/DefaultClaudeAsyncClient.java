@@ -263,8 +263,8 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 					transport.sendUserMessage(effectivePrompt, DEFAULT_SESSION_ID);
 				}
 
-				logger.info("Client connected with prompt: {}",
-						effectivePrompt.substring(0, Math.min(50, effectivePrompt.length())));
+				// Length only; see DefaultClaudeSyncClient for the rationale.
+				logger.info("Client connected with prompt ({} chars)", effectivePrompt.length());
 
 				sink.success();
 			}

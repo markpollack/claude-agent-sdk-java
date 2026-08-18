@@ -216,9 +216,9 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 				transport.sendUserMessage(effectivePrompt, "default");
 			}
 
-			logger.info("Client connected with prompt ({} chars): {}",
-					effectivePrompt.length(),
-					effectivePrompt.substring(0, Math.min(200, effectivePrompt.length())));
+			// Length only. Prompts routinely carry credentials, customer data and other
+			// material that must not reach an application log at INFO.
+			logger.info("Client connected with prompt ({} chars)", effectivePrompt.length());
 		}
 		catch (Exception e) {
 			cleanup();
