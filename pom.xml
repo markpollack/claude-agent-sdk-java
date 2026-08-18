@@ -443,8 +443,10 @@
                                  claude-agent-sdk-parent, which is the artifact the
                                  aggregate SBOM attaches to, so the SBOM could never
                                  reach Central. Its other two entries named
-                                 examples-parent and hello-world, which are not reactor
-                                 modules and were never built or deployed. -->
+                                 examples-parent and hello-world, which were never
+                                 reactor modules and have since moved to the tutorial
+                                 repository. The reactor now builds one deployable
+                                 module, so there is nothing left to exclude. -->
                             <autoPublish>true</autoPublish>
                         </configuration>
                     </plugin>

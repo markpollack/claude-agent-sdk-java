@@ -13,7 +13,10 @@ canonical documentation: architecture, API guides, release history and how the S
 the rest of the lab.
 
 **[Tutorial](https://github.com/markpollack/claude-agent-sdk-java-tutorial)** — 23
-progressive runnable modules, from the Query API through multi-agent orchestration.
+progressive runnable modules, from the Query API through multi-agent orchestration. It also
+hosts [Java ports of Anthropic's official SDK demos](https://github.com/markpollack/claude-agent-sdk-java-tutorial/tree/main/ports/anthropic-demos)
+— hello-world, research-agent, excel-demo and email-agent — which used to live in this
+repository's `examples/` directory.
 
 ## Installation
 
