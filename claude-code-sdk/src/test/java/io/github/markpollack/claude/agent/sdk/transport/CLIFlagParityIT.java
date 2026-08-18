@@ -104,7 +104,21 @@ class CLIFlagParityIT extends ClaudeCliTestBase {
 			"tmux", // --tmux requires worktree, interactive use
 			"remote-control", // --remote-control remote control API (Slack/remote interfaces), not SDK-relevant
 			"plugin-url", // --plugin-url URL-based plugin loading, passable via extraArgs, first-class TBD
-			"prompt-suggestions" // --prompt-suggestions interactive prompt suggestions (interactive UI, not SDK-relevant)
+			"prompt-suggestions", // --prompt-suggestions interactive prompt suggestions (interactive UI, not SDK-relevant)
+
+			// Flags introduced by the CLI after SDK 1.4.0 and observed on CLI 2.1.235.
+			// Recorded as future compatibility backlog, deliberately NOT release scope
+			// for 1.5.0: this release verifies the capabilities the SDK already exposes
+			// against the current CLI rather than chasing newly shipped CLI features.
+			// Anything genuinely needed today remains passable through extraArgs.
+			"forward-subagent-text", // forwards subagent text/thinking into the stream
+			"autocompact", // auto-compact window sizing, a CLI-side conversation policy
+			"cloud", // creates a Claude-hosted cloud session, not a local subprocess
+			"environment", // selects the cloud environment a cloud session runs on
+			"teleport", // resumes a teleport session; cloud/remote session concept
+			"safe-mode", // starts with all customizations disabled, interactive posture
+			"bg", "background", // starts the session as a background agent
+			"ax-screen-reader" // screen-reader friendly rendering, interactive UI only
 	);
 
 	/**
