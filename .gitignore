@@ -51,6 +51,10 @@ examples/research-agent/*.md
 **/node_modules/
 vite.generated.ts
 
+### Example application run logs (generated; were tracked by mistake) ###
+examples/email-agent/email-agent.log
+examples/excel-demo/excel-demo.log
+
 ### Root-level output directories (stray from test runs) ###
 /files/
 /logs/
