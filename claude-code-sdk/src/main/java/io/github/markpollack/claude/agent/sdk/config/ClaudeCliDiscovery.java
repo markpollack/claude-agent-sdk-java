@@ -35,8 +35,6 @@ public class ClaudeCliDiscovery {
 
 	private static final Logger logger = LoggerFactory.getLogger(ClaudeCliDiscovery.class);
 
-	private static final String FALLBACK_PATH = "/home/mark/.nvm/versions/node/v22.15.0/bin/claude";
-
 	private static String discoveredPath;
 
 	private static boolean discoveryAttempted = false;
@@ -86,8 +84,7 @@ public class ClaudeCliDiscovery {
 																								// installation
 				System.getProperty("user.home") + "/.nvm/versions/node/latest/bin/claude", // Latest
 																							// NVM
-				"/usr/bin/claude", // Standard system path
-				FALLBACK_PATH // Development fallback
+				"/usr/bin/claude" // Standard system path
 		};
 
 		for (String candidate : candidates) {
