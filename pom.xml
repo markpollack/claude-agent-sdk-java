@@ -57,7 +57,8 @@
 
         <!-- dependency versions -->
         <zt-exec.version>1.12</zt-exec.version>
-        <jackson.version>2.21.2</jackson.version>
+        <jackson.version>2.21.6</jackson.version>
+        <jackson3.version>3.1.6</jackson3.version>
         <reactor.version>3.8.5</reactor.version>
         <slf4j.version>2.0.17</slf4j.version>
         <mcp.version>2.0.0</mcp.version>
@@ -107,13 +108,14 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Jackson 3 (tools.jackson) — converges transitive
-                 tools.jackson:jackson-core 3.0.3 from mcp 2.0.0 to a
-                 CVE-clear 3.1.4 (CVE-2026-29062) -->
+            <!-- Jackson 3 (tools.jackson) — aligns every tools.jackson artifact
+                 reaching the reactor through mcp 2.0.0. NOTE: a BOM import does not
+                 survive POM flattening, so the published module additionally declares
+                 the Jackson 3 artifacts it actually ships at runtime. -->
             <dependency>
                 <groupId>tools.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>3.1.4</version>
+                <version>${jackson3.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

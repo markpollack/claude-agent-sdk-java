@@ -63,6 +63,29 @@
             <artifactId>mcp</artifactId>
         </dependency>
 
+        <!-- Jackson 3 (tools.jackson) — this SDK does not import tools.jackson in its
+             own source, but mcp 2.0.0 requires mcp-json-jackson3 at runtime, so these
+             artifacts are part of the closure every consumer of claude-code-sdk
+             receives. The parent's tools.jackson BOM import governs the reactor only:
+             flattenMode=ossrh strips <dependencyManagement> from the published POM, so
+             without these direct declarations a no-BOM consumer resolves the vulnerable
+             3.0.3 that mcp drags in transitively. Declared here so the floor travels.
+             jackson-dataformat-yaml is included because Jackson 3 requires every module
+             to sit on the same minor; leaving it at 3.0.3 beside a 3.1.x core is the
+             version skew the floor itself would otherwise introduce. -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
