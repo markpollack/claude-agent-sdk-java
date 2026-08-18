@@ -81,6 +81,7 @@
         <maven-site-plugin.version>4.0.0-M13</maven-site-plugin.version>
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+        <cyclonedx-maven-plugin.version>2.9.2</cyclonedx-maven-plugin.version>
         <spring-javaformat-maven-plugin.version>0.0.43</spring-javaformat-maven-plugin.version>
     </properties>
 
@@ -312,6 +313,43 @@
                 <artifactId>maven-deploy-plugin</artifactId>
                 <version>${maven-deploy-plugin.version}</version>
             </plugin>
+            <!-- Exactly one aggregate CycloneDX SBOM for the whole reactor, emitted by
+                 the root project only. inherited=false keeps the module from producing
+                 a duplicate child SBOM. It attaches to the parent artifact, which is
+                 why the parent must stay in the release bundle. -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>${cyclonedx-maven-plugin.version}</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>aggregate-sbom</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeAggregateBom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- The release profile activates central-publishing-maven-plugin as
+                         a build extension, which marks modules as skipping
+                         maven-deploy-plugin. CycloneDX's skipNotDeployed then defaults to
+                         skipping the SBOM, so `-Prelease` would emit none at all while an
+                         ordinary `package` emitted one. The release path is exactly where
+                         the SBOM has to exist. -->
+                    <skipNotDeployed>false</skipNotDeployed>
+                    <projectType>library</projectType>
+                    <schemaVersion>1.6</schemaVersion>
+                    <outputFormat>json</outputFormat>
+                    <outputName>${project.artifactId}-${project.version}-cyclonedx</outputName>
+                    <includeCompileScope>true</includeCompileScope>
+                    <includeRuntimeScope>true</includeRuntimeScope>
+                    <includeProvidedScope>true</includeProvidedScope>
+                    <includeSystemScope>false</includeSystemScope>
+                    <includeTestScope>false</includeTestScope>
+                </configuration>
+            </plugin>
             <!-- Place the same root LICENSE into the generated Javadoc output tree so
                  the Javadoc archive carries it too. maven-javadoc-plugin only copies a
                  fixed set of resource patterns out of <javadocDirectory>, so the file is
@@ -423,9 +461,12 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
-                            <excludeArtifacts>
-                                claude-agent-sdk-parent,examples-parent,hello-world
-                            </excludeArtifacts>
+                            <!-- No <excludeArtifacts>. It previously excluded
+                                 claude-agent-sdk-parent, which is the artifact the
+                                 aggregate SBOM attaches to, so the SBOM could never
+                                 reach Central. Its other two entries named
+                                 examples-parent and hello-world, which are not reactor
+                                 modules and were never built or deployed. -->
                             <autoPublish>true</autoPublish>
                         </configuration>
                     </plugin>
