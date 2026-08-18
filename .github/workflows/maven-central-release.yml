@@ -4,19 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., 1.1.0)'
+        description: 'Release version (e.g., 1.5.0)'
         required: true
         type: string
 
 jobs:
   release:
-    uses: markpollack/build-tools/.github/workflows/maven-central-release.yml@main
+    # The one canonical release workflow for this repository.
+    uses: markpollack/build-tools/.github/workflows/maven-central-release.yml@35297f1ade5f47c2925d6dab42a7e2d43bd734d0
     permissions:
       contents: write
     with:
       version: ${{ inputs.version }}
       java-version: '21'
-      skip-tests: true
+      # Release verification runs the tests. A release is the last place to skip them.
+      skip-tests: false
+      # Curated, tracked notes rather than a generated commit list.
+      release-notes-file: release-notes/${{ inputs.version }}.md
     secrets:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
       MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}

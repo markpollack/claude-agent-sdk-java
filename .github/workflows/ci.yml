@@ -9,9 +9,34 @@ on:
 
 jobs:
   build:
-    uses: markpollack/build-tools/.github/workflows/ci-build.yml@main
+    # Pinned to an immutable build-tools commit so the reusable workflow cannot change
+    # under this repository. Note the actions *inside* build-tools still float on tags
+    # and @main; that is tracked as a shared Build Tools item, not fixable from here.
+    uses: markpollack/build-tools/.github/workflows/ci-build.yml@35297f1ade5f47c2925d6dab42a7e2d43bd734d0
     with:
       java-version: '21'
       agent-clis: 'claude'
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  standalone-consumer-gate:
+    # The published consumer shape is not covered by the reactor build: the parent's
+    # dependencyManagement does not survive POM flattening, which is exactly how 1.4.0
+    # shipped vulnerable Jackson floors while its own build stayed green.
+    #
+    # Deterministic by construction — no Trivy, no NVD/OWASP database, no credentials,
+    # no Claude CLI, no paid model calls — so it runs on every build.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Standalone consumer gate
+        run: ./scripts/standalone-consumer-gate.sh
