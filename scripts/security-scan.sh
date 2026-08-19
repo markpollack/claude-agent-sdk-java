@@ -32,17 +32,20 @@ command -v trivy >/dev/null 2>&1 || {
   exit 1
 }
 
-TRIVY_ARGS=(--disable-telemetry)
+# --cache-dir is a global flag and belongs before the subcommand; --disable-telemetry
+# is a scan-subcommand flag and belongs after it. Passing the latter globally makes
+# every invocation fail with "unknown flag: --disable-telemetry".
+TRIVY_ARGS=()
+SCAN_ARGS=(--disable-telemetry)
 if [ -n "${TRIVY_CACHE_DIR:-}" ]; then
   [ -d "$TRIVY_CACHE_DIR" ] || { echo "FATAL: TRIVY_CACHE_DIR does not exist: $TRIVY_CACHE_DIR" >&2; exit 1; }
   TRIVY_ARGS+=(--cache-dir "$TRIVY_CACHE_DIR")
-  SCAN_ARGS=(--skip-db-update --skip-java-db-update --offline-scan)
+  SCAN_ARGS+=(--skip-db-update --skip-java-db-update --offline-scan)
   echo "== using frozen database: $TRIVY_CACHE_DIR (updates disabled, offline)"
   for f in db/trivy.db db/metadata.json java-db/trivy-java.db java-db/metadata.json; do
     [ -f "$TRIVY_CACHE_DIR/$f" ] && printf '   %-24s %s\n' "$f" "$(sha256sum "$TRIVY_CACHE_DIR/$f" | cut -d' ' -f1)"
   done
 else
-  SCAN_ARGS=()
   echo "== using Trivy's own database (it may update over the network)"
 fi
 echo
