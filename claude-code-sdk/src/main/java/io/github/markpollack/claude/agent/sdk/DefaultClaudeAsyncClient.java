@@ -244,9 +244,6 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 				// Create raw message sink for receiveMessages() (low-level access)
 				rawMessageSink = Sinks.many().multicast().onBackpressureBuffer();
 
-				// Build effective prompt
-				String effectivePrompt = initialPrompt != null ? initialPrompt : "Hello";
-
 				// Start session with control request and response handling
 				transport.startSession(null, options, this::handleMessage, this::handleControlRequest,
 						this::handleControlResponse);
@@ -258,13 +255,16 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 					sendInitialize();
 				}
 
-				// Now send the initial prompt
-				if (effectivePrompt != null) {
-					transport.sendUserMessage(effectivePrompt, DEFAULT_SESSION_ID);
+				// Only the caller's own prompt is ever sent; see
+				// DefaultClaudeSyncClient.connect(String) for the rationale.
+				if (initialPrompt != null) {
+					transport.sendUserMessage(initialPrompt, DEFAULT_SESSION_ID);
+					// Length only; see DefaultClaudeSyncClient for the rationale.
+					logger.info("Client connected with prompt ({} chars)", initialPrompt.length());
 				}
-
-				// Length only; see DefaultClaudeSyncClient for the rationale.
-				logger.info("Client connected with prompt ({} chars)", effectivePrompt.length());
+				else {
+					logger.info("Client connected without an initial prompt");
+				}
 
 				sink.success();
 			}

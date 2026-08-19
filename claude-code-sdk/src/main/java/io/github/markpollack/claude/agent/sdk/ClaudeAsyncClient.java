@@ -167,6 +167,12 @@ public interface ClaudeAsyncClient {
 
 	/**
 	 * Connects to Claude CLI and starts a new session without an initial prompt.
+	 *
+	 * <p>
+	 * No user message is sent: the session is started and initialised, and the first
+	 * turn is whatever the caller passes to {@link #query(String)}. Use
+	 * {@link #connect(String)} to open the conversation with a prompt.
+	 * </p>
 	 * @return Mono that completes when the connection is established
 	 */
 	Mono<Void> connect();

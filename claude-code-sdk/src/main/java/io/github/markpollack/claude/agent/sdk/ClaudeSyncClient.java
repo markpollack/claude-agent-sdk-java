@@ -67,6 +67,12 @@ public interface ClaudeSyncClient extends AutoCloseable {
 	/**
 	 * Connects to the Claude CLI without an initial prompt. The client is ready for
 	 * queries after this call.
+	 *
+	 * <p>
+	 * No user message is sent: the session is started and initialised, and the first
+	 * turn is whatever the caller passes to {@link #query(String)}. Use
+	 * {@link #connect(String)} to open the conversation with a prompt.
+	 * </p>
 	 * @throws ClaudeSDKException if connection fails
 	 */
 	void connect() throws ClaudeSDKException;

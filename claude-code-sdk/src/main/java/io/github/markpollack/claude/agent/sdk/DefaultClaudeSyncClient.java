@@ -197,9 +197,6 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 			messageIterator = new MessageStreamIterator();
 			blockingReceiver = new BlockingMessageReceiver();
 
-			// Build effective prompt
-			String effectivePrompt = initialPrompt != null ? initialPrompt : "Hello";
-
 			// Start session with control request and response handling
 			transport.startSession(null, options, this::handleMessage, this::handleControlRequest,
 					this::handleControlResponse);
@@ -211,14 +208,19 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 				sendInitialize();
 			}
 
-			// Now send the initial prompt
-			if (effectivePrompt != null) {
-				transport.sendUserMessage(effectivePrompt, "default");
+			// Only the caller's own prompt is ever sent. connect() with no argument
+			// starts and initialises the session and leaves the client ready for
+			// query(), as its contract states. Substituting a synthetic prompt here
+			// billed a model turn the caller never asked for.
+			if (initialPrompt != null) {
+				transport.sendUserMessage(initialPrompt, "default");
+				// Length only. Prompts routinely carry credentials, customer data and
+				// other material that must not reach an application log at INFO.
+				logger.info("Client connected with prompt ({} chars)", initialPrompt.length());
 			}
-
-			// Length only. Prompts routinely carry credentials, customer data and other
-			// material that must not reach an application log at INFO.
-			logger.info("Client connected with prompt ({} chars)", effectivePrompt.length());
+			else {
+				logger.info("Client connected without an initial prompt");
+			}
 		}
 		catch (Exception e) {
 			cleanup();
