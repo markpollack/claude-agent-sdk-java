@@ -17,6 +17,12 @@ jobs:
       # Snapshot verification runs the tests. Publishing an artifact that no build
       # proved green is what the release policy forbids.
       skip-tests: false
+      # verify runs the failsafe suite too, and all 13 IT classes drive a real Claude
+      # CLI. Without this the CLI is absent and every one of them errors with "Claude
+      # CLI was not found during discovery" -- exactly how this workflow failed the
+      # first time tests were genuinely enforced here. ci.yml installs it the same way.
+      agent-clis: 'claude'
     secrets:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
       MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
