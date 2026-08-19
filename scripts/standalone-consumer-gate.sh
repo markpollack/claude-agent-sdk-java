@@ -27,6 +27,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MVNW="$REPO_ROOT/mvnw"
 
+# Gate the repository this script belongs to, not whatever happens to be the caller's
+# working directory. mvnw reads the pom.xml in $PWD, so without this the gate silently
+# builds and passes a different tree -- a gate that reports PASS for code it never saw.
+cd "$REPO_ROOT"
+
 GROUP_ID="io.github.markpollack"
 ARTIFACT_ID="claude-code-sdk"
 
