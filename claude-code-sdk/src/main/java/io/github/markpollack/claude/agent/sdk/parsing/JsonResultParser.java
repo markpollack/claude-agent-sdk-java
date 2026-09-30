@@ -18,11 +18,11 @@ package io.github.markpollack.claude.agent.sdk.parsing;
 
 import io.github.markpollack.claude.agent.sdk.exceptions.MessageParseException;
 import io.github.markpollack.claude.agent.sdk.types.ResultMessage;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -84,7 +84,7 @@ public class JsonResultParser {
 			JsonNode root = objectMapper.readTree(json);
 			return parseResultFromNode(root);
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			throw MessageParseException.jsonDecodeError(json, e);
 		}
 	}
@@ -152,7 +152,7 @@ public class JsonResultParser {
 		}
 
 		// Parse all usage fields
-		usageNode.fields().forEachRemaining(entry -> {
+		usageNode.properties().forEach(entry -> {
 			String key = entry.getKey();
 			JsonNode value = entry.getValue();
 
@@ -162,19 +162,19 @@ public class JsonResultParser {
 			else if (value.isDouble()) {
 				usage.put(key, value.asDouble());
 			}
-			else if (value.isTextual()) {
-				usage.put(key, value.asText());
+			else if (value.isString()) {
+				usage.put(key, value.asString());
 			}
 			else if (value.isObject()) {
 				// Handle nested objects like server_tool_use
 				Map<String, Object> nestedMap = new HashMap<>();
-				value.fields().forEachRemaining(nestedEntry -> {
+				value.properties().forEach(nestedEntry -> {
 					JsonNode nestedValue = nestedEntry.getValue();
 					if (nestedValue.isInt()) {
 						nestedMap.put(nestedEntry.getKey(), nestedValue.asInt());
 					}
-					else if (nestedValue.isTextual()) {
-						nestedMap.put(nestedEntry.getKey(), nestedValue.asText());
+					else if (nestedValue.isString()) {
+						nestedMap.put(nestedEntry.getKey(), nestedValue.asString());
 					}
 					else {
 						nestedMap.put(nestedEntry.getKey(), nestedValue.toString());
@@ -192,7 +192,7 @@ public class JsonResultParser {
 
 	private String getStringField(JsonNode node, String fieldName) {
 		JsonNode field = node.get(fieldName);
-		return (field != null && !field.isNull()) ? field.asText() : null;
+		return (field != null && !field.isNull()) ? field.asString() : null;
 	}
 
 	private int getIntField(JsonNode node, String fieldName, int defaultValue) {

@@ -18,11 +18,11 @@ package io.github.markpollack.claude.agent.sdk.parsing;
 
 import io.github.markpollack.claude.agent.sdk.exceptions.MessageParseException;
 import io.github.markpollack.claude.agent.sdk.types.*;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +51,7 @@ public class MessageParser {
 			JsonNode root = objectMapper.readTree(json);
 			return parseMessageFromNode(root);
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			throw MessageParseException.jsonDecodeError(json, e);
 		}
 	}
@@ -60,6 +60,15 @@ public class MessageParser {
 	 * Parses a JsonNode into a Message object.
 	 */
 	public Message parseMessageFromNode(JsonNode node) throws MessageParseException {
+		try {
+			return tryParseMessageFromNode(node);
+		}
+		catch (JacksonException e) {
+			throw new MessageParseException("Unexpected error when reading json fields: " + e.getMessage(), e);
+		}
+	}
+
+	private Message tryParseMessageFromNode(JsonNode node) throws MessageParseException {
 		String type = getStringField(node, "type");
 		if (type == null) {
 			throw new MessageParseException("Missing 'type' field in message");
@@ -91,8 +100,8 @@ public class MessageParser {
 			throw new MessageParseException("Missing 'content' field in user message");
 		}
 
-		if (contentNode.isTextual()) {
-			return UserMessage.of(contentNode.asText());
+		if (contentNode.isString()) {
+			return UserMessage.of(contentNode.asString());
 		}
 		else if (contentNode.isArray()) {
 			List<ContentBlock> blocks = parseContentBlocks(contentNode);
@@ -222,8 +231,8 @@ public class MessageParser {
 		JsonNode contentNode = node.get("content");
 		Object content = null;
 		if (contentNode != null) {
-			if (contentNode.isTextual()) {
-				content = contentNode.asText();
+			if (contentNode.isString()) {
+				content = contentNode.asString();
 			}
 			else if (contentNode.isArray()) {
 				content = parseDataList(contentNode);
@@ -246,7 +255,7 @@ public class MessageParser {
 
 	private Map<String, Object> parseDataMap(JsonNode node) {
 		Map<String, Object> map = new HashMap<>();
-		node.fields().forEachRemaining(entry -> {
+		node.properties().forEach(entry -> {
 			map.put(entry.getKey(), parseJsonValue(entry.getValue()));
 		});
 		return map;
@@ -261,8 +270,8 @@ public class MessageParser {
 	}
 
 	private Object parseJsonValue(JsonNode node) {
-		if (node.isTextual()) {
-			return node.asText();
+		if (node.isString()) {
+			return node.asString();
 		}
 		else if (node.isNumber()) {
 			return node.isInt() ? node.asInt() : node.asDouble();
@@ -288,7 +297,7 @@ public class MessageParser {
 	// Utility methods for safe field extraction
 	private String getStringField(JsonNode node, String fieldName) {
 		JsonNode field = node.get(fieldName);
-		return field != null && field.isTextual() ? field.asText() : null;
+		return field != null && field.isString() ? field.asString() : null;
 	}
 
 	private int getIntField(JsonNode node, String fieldName, int defaultValue) {

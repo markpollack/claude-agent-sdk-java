@@ -16,7 +16,6 @@
 
 package io.github.markpollack.claude.agent.sdk.hooks;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -30,6 +29,7 @@ import io.github.markpollack.claude.agent.sdk.types.control.ControlRequest;
 import io.github.markpollack.claude.agent.sdk.types.control.ControlResponse;
 import io.github.markpollack.claude.agent.sdk.types.control.HookInput;
 import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.List;

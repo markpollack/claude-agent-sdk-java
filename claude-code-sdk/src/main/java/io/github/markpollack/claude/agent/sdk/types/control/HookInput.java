@@ -28,8 +28,8 @@ import java.util.Optional;
  * Base sealed interface for all hook input types. Each hook event receives a specific
  * input type with relevant data.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "hook_event_name",
-		visible = true)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY,
+		property = "hook_event_name", visible = true)
 @JsonSubTypes({ @JsonSubTypes.Type(value = HookInput.PreToolUseInput.class, name = "PreToolUse"),
 		@JsonSubTypes.Type(value = HookInput.PostToolUseInput.class, name = "PostToolUse"),
 		@JsonSubTypes.Type(value = HookInput.UserPromptSubmitInput.class, name = "UserPromptSubmit"),

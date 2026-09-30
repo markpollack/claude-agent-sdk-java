@@ -25,6 +25,7 @@ import io.github.markpollack.claude.agent.sdk.types.ContentBlock;
 import io.github.markpollack.claude.agent.sdk.types.Message;
 import io.github.markpollack.claude.agent.sdk.types.ResultMessage;
 import io.github.markpollack.claude.agent.sdk.types.UserMessage;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;

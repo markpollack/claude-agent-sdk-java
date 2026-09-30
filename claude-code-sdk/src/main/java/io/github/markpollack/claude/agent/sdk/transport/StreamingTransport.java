@@ -16,8 +16,6 @@
 
 package io.github.markpollack.claude.agent.sdk.transport;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.github.markpollack.claude.agent.sdk.config.ClaudeCliDiscovery;
@@ -37,6 +35,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -534,7 +534,7 @@ public class StreamingTransport implements AutoCloseable {
 				command.add("--json-schema");
 				command.add(schemaJson);
 			}
-			catch (JsonProcessingException e) {
+			catch (JacksonException e) {
 				logger.warn("Failed to serialize JSON schema, skipping --json-schema flag", e);
 			}
 		}
@@ -552,7 +552,7 @@ public class StreamingTransport implements AutoCloseable {
 					logger.debug("Wrote MCP config to temp file: {}", this.mcpConfigFile);
 				}
 			}
-			catch (IOException e) {
+			catch (IOException | JacksonException e) {
 				logger.warn("Failed to write MCP config file, skipping --mcp-config flag", e);
 			}
 		}
@@ -931,7 +931,7 @@ public class StreamingTransport implements AutoCloseable {
 				throw new TransportException("Failed to queue user message: " + result);
 			}
 		}
-		catch (IOException e) {
+		catch (JacksonException e) {
 			throw new TransportException("Failed to serialize user message", e);
 		}
 	}
@@ -953,7 +953,7 @@ public class StreamingTransport implements AutoCloseable {
 				throw new TransportException("Failed to queue control response: " + result);
 			}
 		}
-		catch (IOException e) {
+		catch (JacksonException e) {
 			throw new TransportException("Failed to serialize control response", e);
 		}
 	}

@@ -17,7 +17,7 @@
 package io.github.markpollack.claude.agent.sdk.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 

@@ -27,6 +27,8 @@ import io.github.markpollack.claude.agent.sdk.types.ResultMessage;
 import io.github.markpollack.claude.agent.sdk.types.SystemMessage;
 import io.github.markpollack.claude.agent.sdk.types.UserMessage;
 import io.github.markpollack.claude.agent.sdk.types.control.ControlRequest;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -90,6 +92,31 @@ class ControlMessageParserTest {
 			assertThat(hookCallback.callbackId()).isEqualTo("hook_0");
 			assertThat(hookCallback.toolUseId()).isEqualTo("tool_123");
 			assertThat(hookCallback.input()).containsEntry("tool_name", "Bash");
+		}
+
+		@Test
+		@DisplayName("Should ignore unknown fields even with a strict caller-supplied mapper")
+		void parseWithStrictCallerMapper() throws Exception {
+			var strict = JsonMapper.builder().enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
+			var strictParser = new ControlMessageParser(strict);
+			String json = """
+					{
+					  "type": "control_request",
+					  "request_id": "req_strict",
+					  "unknown_top": 1,
+					  "request": {
+					    "subtype": "hook_callback",
+					    "callback_id": "hook_0",
+					    "unknown_inner": "x",
+					    "input": {"tool_name": "Bash"}
+					  }
+					}
+					""";
+
+			ParsedMessage result = strictParser.parse(json);
+
+			assertThat(result.isControlRequest()).isTrue();
+			assertThat(result.asControlRequest().requestId()).isEqualTo("req_strict");
 		}
 
 		@Test

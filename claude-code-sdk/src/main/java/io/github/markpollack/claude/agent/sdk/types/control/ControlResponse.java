@@ -47,7 +47,7 @@ public record ControlResponse(@JsonProperty("type") String type, @JsonProperty("
 	/**
 	 * Sealed interface for response payload types.
 	 */
-	@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "subtype")
+	@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "subtype")
 	@JsonSubTypes({ @JsonSubTypes.Type(value = SuccessPayload.class, name = "success"),
 			@JsonSubTypes.Type(value = ErrorPayload.class, name = "error") })
 	public sealed interface ResponsePayload permits SuccessPayload, ErrorPayload {

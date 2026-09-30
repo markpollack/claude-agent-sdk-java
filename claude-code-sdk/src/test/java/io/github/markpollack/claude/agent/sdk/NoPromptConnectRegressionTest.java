@@ -25,8 +25,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -35,6 +33,8 @@ import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.Disposable;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -258,8 +258,8 @@ class NoPromptConnectRegressionTest {
 		List<String> contents = new ArrayList<>();
 		for (String line : recordedLines()) {
 			JsonNode node = MAPPER.readTree(line);
-			if ("user".equals(node.path("type").asText())) {
-				contents.add(node.path("message").path("content").asText());
+			if ("user".equals(node.path("type").asString())) {
+				contents.add(node.path("message").path("content").asString());
 			}
 		}
 		return contents;

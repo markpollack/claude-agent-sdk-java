@@ -4,7 +4,7 @@
 #
 # Why this exists
 # ---------------
-# The parent POM's <dependencyManagement> — including its Jackson BOM imports — does
+# The parent POM's <dependencyManagement> — including its Jackson BOM import — does
 # NOT survive POM flattening (flattenMode=ossrh). An ordinary consumer that depends on
 # claude-code-sdk without this project's parent and without any BOM therefore resolves
 # whatever the flattened POM declares plus whatever transitives Maven picks. Released
@@ -35,11 +35,10 @@ cd "$REPO_ROOT"
 GROUP_ID="io.github.markpollack"
 ARTIFACT_ID="claude-code-sdk"
 
-# Required floors. Both are consumer-visible: Jackson 2 is declared directly by the SDK,
-# Jackson 3 arrives through mcp -> mcp-json-jackson3 and is declared directly so the
-# floor travels in the flattened POM.
-JACKSON2_FLOOR="2.21.6"
-JACKSON3_FLOOR="3.1.6"
+# Required floor. Jackson 3 is the SDK's JSON stack and is also required by
+# mcp -> mcp-json-jackson3; the SDK declares it directly so the floor travels in the
+# flattened POM. Jackson 2 (jackson-core/jackson-databind) must not reach consumers at all.
+JACKSON_FLOOR="3.1.6"
 
 # Expected Java shape: class-file major 65 == Java 21.
 EXPECTED_CLASSFILE_MAJOR="65"
@@ -169,27 +168,25 @@ check_floor() { # $1 label, $2 jar prefix, $3 floor, $4 expected-groupId marker 
 }
 
 # Jackson 2 and Jackson 3 both publish a jackson-core/jackson-databind pair. Disambiguate
-# by version line rather than by file name.
+# by version line rather than by file name. Any Jackson 2 core/databind is a failure: the
+# SDK is Jackson 3 only. (jackson-annotations keeps 2.x coordinates by Jackson 3's design
+# and is not matched here.)
 for prefix in jackson-core jackson-databind; do
   for jar in "$CLOSURE/$prefix"-*.jar; do
     [ -e "$jar" ] || continue
     v="$(basename "$jar" | sed -E "s/^$prefix-(.+)\.jar$/\1/")"
     case "$v" in
-      2.*) if version_ge "$v" "$JACKSON2_FLOOR"; then
-             pass "com.fasterxml.jackson.core:$prefix resolved $v (floor $JACKSON2_FLOOR)"
+      2.*) fail "com.fasterxml.jackson.core:$prefix $v is in the consumer closure; Jackson 2 must not reach consumers" ;;
+      3.*) if version_ge "$v" "$JACKSON_FLOOR"; then
+             pass "tools.jackson.core:$prefix resolved $v (floor $JACKSON_FLOOR)"
            else
-             fail "com.fasterxml.jackson.core:$prefix resolved $v, below floor $JACKSON2_FLOOR"
-           fi ;;
-      3.*) if version_ge "$v" "$JACKSON3_FLOOR"; then
-             pass "tools.jackson.core:$prefix resolved $v (floor $JACKSON3_FLOOR)"
-           else
-             fail "tools.jackson.core:$prefix resolved $v, below floor $JACKSON3_FLOOR"
+             fail "tools.jackson.core:$prefix resolved $v, below floor $JACKSON_FLOOR"
            fi ;;
       *)   fail "$prefix resolved an unexpected version line: $v" ;;
     esac
   done
 done
-check_floor "tools.jackson.dataformat:jackson-dataformat-yaml" jackson-dataformat-yaml "$JACKSON3_FLOOR"
+check_floor "tools.jackson.dataformat:jackson-dataformat-yaml" jackson-dataformat-yaml "$JACKSON_FLOOR"
 
 # Every Jackson 3 artifact must sit on one minor; skew across tools.jackson modules is a
 # runtime hazard, not a cosmetic difference.
@@ -231,8 +228,8 @@ echo
 # ---------------------------------------------------------------------------
 # 7. Offline runtime smoke against the resolved closure.
 #
-#    This links the SDK's Jackson 2 parsing path and the Jackson 3 stack that mcp
-#    supplies, on exactly the versions a consumer receives. It spawns no Claude CLI
+#    This links the SDK's own parsing path and the JSON mapper mcp binds, both on
+#    Jackson 3, on exactly the versions a consumer receives. It spawns no Claude CLI
 #    process, opens no network connection, and uses no credentials.
 # ---------------------------------------------------------------------------
 echo "[runtime smoke]"
@@ -258,7 +255,7 @@ public class ConsumerSmoke {
             throw new IllegalStateException("expected a Java 21+ runtime, got " + feature);
         }
 
-        // Jackson 2 path: the SDK's own message parsing.
+        // SDK path: the SDK's own message parsing.
         String assistant = "{\"type\":\"assistant\",\"message\":{\"id\":\"msg_1\",\"model\":\"m\","
                 + "\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}";
         Message parsed = new MessageParser().parseMessage(assistant);
@@ -272,7 +269,7 @@ public class ConsumerSmoke {
             throw new IllegalStateException("CLIOptions.builder() returned null");
         }
 
-        // Jackson 3 path: the JSON mapper mcp actually binds at runtime, loaded through
+        // mcp path: the JSON mapper mcp actually binds at runtime, loaded through
         // its ServiceLoader SPI so core/databind must genuinely link.
         McpJsonMapperSupplier supplier = ServiceLoader.load(McpJsonMapperSupplier.class)
                 .findFirst()

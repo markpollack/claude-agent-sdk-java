@@ -33,8 +33,8 @@ import java.util.Map;
  * In-process SDK servers are managed by the Java SDK and communicate via the mcp_message
  * control protocol.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = McpServerConfig.McpStdioServerConfig.class,
-		visible = true)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type",
+		defaultImpl = McpServerConfig.McpStdioServerConfig.class, visible = true)
 @JsonSubTypes({ @JsonSubTypes.Type(value = McpServerConfig.McpStdioServerConfig.class, name = "stdio"),
 		@JsonSubTypes.Type(value = McpServerConfig.McpSseServerConfig.class, name = "sse"),
 		@JsonSubTypes.Type(value = McpServerConfig.McpHttpServerConfig.class, name = "http"),

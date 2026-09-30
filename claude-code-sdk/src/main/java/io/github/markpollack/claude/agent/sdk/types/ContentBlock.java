@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * Base interface for content blocks in Claude messages. Corresponds to ContentBlock union
  * type in Python SDK.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
 @JsonSubTypes({ @JsonSubTypes.Type(value = TextBlock.class, name = "text"),
 		@JsonSubTypes.Type(value = ToolUseBlock.class, name = "tool_use"),
 		@JsonSubTypes.Type(value = ToolResultBlock.class, name = "tool_result"),

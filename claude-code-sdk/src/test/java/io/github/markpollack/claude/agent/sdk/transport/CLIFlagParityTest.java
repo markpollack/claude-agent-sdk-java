@@ -23,10 +23,13 @@ import org.junit.jupiter.api.io.TempDir;
 import io.github.markpollack.claude.agent.sdk.config.PermissionMode;
 import io.github.markpollack.claude.agent.sdk.config.PluginConfig;
 import io.github.markpollack.claude.agent.sdk.mcp.McpServerConfig;
+import tools.jackson.databind.ObjectMapper;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 

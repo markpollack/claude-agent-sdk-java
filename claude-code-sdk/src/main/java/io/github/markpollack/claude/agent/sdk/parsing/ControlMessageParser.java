@@ -16,10 +16,6 @@
 
 package io.github.markpollack.claude.agent.sdk.parsing;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.github.markpollack.claude.agent.sdk.exceptions.MessageParseException;
@@ -27,6 +23,10 @@ import io.github.markpollack.claude.agent.sdk.types.Message;
 import io.github.markpollack.claude.agent.sdk.types.RateLimitEvent;
 import io.github.markpollack.claude.agent.sdk.types.control.ControlRequest;
 import io.github.markpollack.claude.agent.sdk.types.control.ControlResponse;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Parser for Claude CLI bidirectional control protocol messages. This parser handles both
@@ -80,7 +80,7 @@ public class ControlMessageParser {
 	 * @param maxBufferSize maximum message size in bytes (for buffer overflow protection)
 	 */
 	public ControlMessageParser(int maxBufferSize) {
-		this.objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		this.objectMapper = new ObjectMapper();
 		this.messageParser = new MessageParser();
 		this.maxBufferSize = maxBufferSize > 0 ? maxBufferSize : DEFAULT_MAX_BUFFER_SIZE;
 	}
@@ -99,7 +99,7 @@ public class ControlMessageParser {
 	 * @param maxBufferSize maximum message size in bytes (for buffer overflow protection)
 	 */
 	public ControlMessageParser(ObjectMapper objectMapper, int maxBufferSize) {
-		this.objectMapper = objectMapper.copy().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		this.objectMapper = objectMapper.rebuild().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
 		this.messageParser = new MessageParser();
 		this.maxBufferSize = maxBufferSize > 0 ? maxBufferSize : DEFAULT_MAX_BUFFER_SIZE;
 	}
@@ -127,7 +127,7 @@ public class ControlMessageParser {
 			JsonNode root = objectMapper.readTree(json);
 			return parseFromNode(root, json);
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			throw MessageParseException.jsonDecodeError(json, e);
 		}
 	}
@@ -149,11 +149,11 @@ public class ControlMessageParser {
 	 */
 	public ParsedMessage parseFromNode(JsonNode node, String originalJson) throws MessageParseException {
 		JsonNode typeNode = node.get("type");
-		if (typeNode == null || !typeNode.isTextual()) {
+		if (typeNode == null || !typeNode.isString()) {
 			throw new MessageParseException("Missing or invalid 'type' field in message");
 		}
 
-		String type = typeNode.asText();
+		String type = typeNode.asString();
 
 		if (TYPE_CONTROL_REQUEST.equals(type)) {
 			return parseControlRequest(node, originalJson);
@@ -185,7 +185,7 @@ public class ControlMessageParser {
 
 			return ParsedMessage.Control.of(request);
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			throw new MessageParseException("Failed to parse control request: " + e.getMessage(), e);
 		}
 	}
@@ -205,7 +205,7 @@ public class ControlMessageParser {
 
 			return ParsedMessage.ControlResponseMessage.of(response);
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			throw new MessageParseException("Failed to parse control response: " + e.getMessage(), e);
 		}
 	}
@@ -222,7 +222,7 @@ public class ControlMessageParser {
 					event.rateLimitInfo() != null ? event.rateLimitInfo().resetsAt() : 0);
 			return ParsedMessage.RateLimitEventMessage.of(event);
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			throw new MessageParseException("Failed to parse rate_limit_event: " + e.getMessage(), e);
 		}
 	}
@@ -255,9 +255,9 @@ public class ControlMessageParser {
 		try {
 			JsonNode root = objectMapper.readTree(json);
 			JsonNode typeNode = root.get("type");
-			return typeNode != null && TYPE_CONTROL_REQUEST.equals(typeNode.asText());
+			return typeNode != null && TYPE_CONTROL_REQUEST.equals(typeNode.asString());
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			return false;
 		}
 	}
@@ -276,9 +276,9 @@ public class ControlMessageParser {
 		try {
 			JsonNode root = objectMapper.readTree(json);
 			JsonNode requestIdNode = root.get("request_id");
-			return requestIdNode != null && requestIdNode.isTextual() ? requestIdNode.asText() : null;
+			return requestIdNode != null && requestIdNode.isString() ? requestIdNode.asString() : null;
 		}
-		catch (JsonProcessingException e) {
+		catch (JacksonException e) {
 			return null;
 		}
 	}

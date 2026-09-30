@@ -16,9 +16,9 @@
 
 package io.github.markpollack.claude.agent.sdk.mcp;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +44,7 @@ class McpServerConfigTest {
 
 		String json = objectMapper.writeValueAsString(config);
 
+		assertThat(json).containsOnlyOnce("\"type\"");
 		assertThat(json).contains("\"type\":\"stdio\"");
 		assertThat(json).contains("\"command\":\"npx\"");
 		assertThat(json).contains("\"args\"");
@@ -75,6 +76,7 @@ class McpServerConfigTest {
 
 		String json = objectMapper.writeValueAsString(config);
 
+		assertThat(json).containsOnlyOnce("\"type\"");
 		assertThat(json).contains("\"type\":\"sse\"");
 		assertThat(json).contains("\"url\":\"http://localhost:8080/sse\"");
 		assertThat(json).contains("\"headers\"");
@@ -94,6 +96,7 @@ class McpServerConfigTest {
 
 		String json = objectMapper.writeValueAsString(config);
 
+		assertThat(json).containsOnlyOnce("\"type\"");
 		assertThat(json).contains("\"type\":\"http\"");
 		assertThat(json).contains("\"url\":\"http://localhost:8080/mcp\"");
 
@@ -111,6 +114,7 @@ class McpServerConfigTest {
 
 		String json = objectMapper.writeValueAsString(config);
 
+		assertThat(json).containsOnlyOnce("\"type\"");
 		assertThat(json).contains("\"type\":\"sdk\"");
 		assertThat(json).contains("\"name\":\"calculator\"");
 		// Instance should not be serialized

@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.markpollack</groupId>
         <artifactId>claude-agent-sdk-parent</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>2.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -31,15 +31,7 @@
             <artifactId>zt-exec</artifactId>
         </dependency>
 
-        <!-- JSON processing -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
+        <!-- JSON annotations -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
@@ -63,16 +55,13 @@
             <artifactId>mcp</artifactId>
         </dependency>
 
-        <!-- Jackson 3 (tools.jackson) — this SDK does not import tools.jackson in its
-             own source, but mcp 2.0.0 requires mcp-json-jackson3 at runtime, so these
-             artifacts are part of the closure every consumer of claude-code-sdk
-             receives. The parent's tools.jackson BOM import governs the reactor only:
-             flattenMode=ossrh strips <dependencyManagement> from the published POM, so
-             without these direct declarations a no-BOM consumer resolves the vulnerable
-             3.0.3 that mcp drags in transitively. Declared here so the floor travels.
-             jackson-dataformat-yaml is included because Jackson 3 requires every module
-             to sit on the same minor; leaving it at 3.0.3 beside a 3.1.x core is the
-             version skew the floor itself would otherwise introduce. -->
+        <!-- JSON processing — Jackson 3 (tools.jackson), the SDK's JSON stack and also
+             required by mcp at runtime. The parent's tools.jackson BOM governs the
+             reactor only: flattenMode=ossrh strips <dependencyManagement> from the
+             published POM, so these direct declarations are what carry the version
+             floor to a no-BOM consumer. jackson-dataformat-yaml is included because
+             Jackson 3 requires every module to sit on the same minor, and it reaches
+             consumers through mcp's json-schema-validator. -->
         <dependency>
             <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
