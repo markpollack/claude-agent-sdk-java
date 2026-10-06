@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.github.markpollack.claude.agent.sdk.config.ClaudeCliDiscovery;
-import io.github.markpollack.claude.agent.sdk.config.PermissionMode;
 import io.github.markpollack.claude.agent.sdk.exceptions.ClaudeSDKException;
 import io.github.markpollack.claude.agent.sdk.exceptions.SessionClosedException;
 import io.github.markpollack.claude.agent.sdk.exceptions.TransportException;
@@ -463,14 +462,12 @@ public class StreamingTransport implements AutoCloseable {
 		}
 
 		if (options.getPermissionMode() != null) {
-			if (options.getPermissionMode() == PermissionMode.DANGEROUSLY_SKIP_PERMISSIONS) {
-				// DANGEROUSLY_SKIP_PERMISSIONS uses a separate flag, not
-				// --permission-mode
-				command.add("--dangerously-skip-permissions");
-			}
-			else {
+			if (options.getPermissionMode().isPermissionModeValue()) {
 				command.add("--permission-mode");
 				command.add(options.getPermissionMode().getValue());
+			}
+			else {
+				command.add("--dangerously-skip-permissions");
 			}
 		}
 

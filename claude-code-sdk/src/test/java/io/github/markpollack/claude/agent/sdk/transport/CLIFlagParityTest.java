@@ -20,6 +20,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import io.github.markpollack.claude.agent.sdk.config.PermissionMode;
 import io.github.markpollack.claude.agent.sdk.config.PluginConfig;
 import io.github.markpollack.claude.agent.sdk.mcp.McpServerConfig;
@@ -29,6 +31,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -218,6 +221,26 @@ class CLIFlagParityTest {
 				CLIOptions options = CLIOptions.builder().permissionMode(PermissionMode.BYPASS_PERMISSIONS).build();
 				List<String> cmd = transport.buildStreamingCommand(options);
 				assertThat(cmd).containsSubsequence("--permission-mode", "bypassPermissions");
+			}
+		}
+
+		static Stream<PermissionMode> permissionModeValues() {
+			return Stream.of(PermissionMode.values()).filter(PermissionMode::isPermissionModeValue);
+		}
+
+		/**
+		 * Whether the CLI accepts each value is checked by {@code CLIFlagParityIT}.
+		 */
+		@ParameterizedTest(name = "--permission-mode {0}")
+		@MethodSource("permissionModeValues")
+		@DisplayName("every --permission-mode value is emitted once and parses back to its constant")
+		void permissionModeValues(PermissionMode mode) {
+			try (StreamingTransport transport = createTransport()) {
+				CLIOptions options = CLIOptions.builder().permissionMode(mode).build();
+				List<String> cmd = transport.buildStreamingCommand(options);
+				assertThat(cmd).containsSubsequence("--permission-mode", mode.getValue());
+				assertThat(cmd.stream().filter("--permission-mode"::equals)).hasSize(1);
+				assertThat(PermissionMode.fromValue(mode.getValue())).isSameAs(mode);
 			}
 		}
 

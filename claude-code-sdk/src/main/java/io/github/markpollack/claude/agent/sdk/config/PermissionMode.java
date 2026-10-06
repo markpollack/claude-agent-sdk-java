@@ -19,11 +19,22 @@ package io.github.markpollack.claude.agent.sdk.config;
 /**
  * Permission modes for Claude Code tool usage. Corresponds to PermissionMode in Python
  * SDK.
+ *
+ * <p>
+ * Every constant for which {@link #isPermissionModeValue()} holds is passed to the CLI as
+ * {@code --permission-mode <value>}. {@code CLIFlagParityIT} checks that the CLI accepts
+ * each of them.
+ * </p>
  */
 public enum PermissionMode {
 
 	/**
 	 * Default permission mode - prompt for tool usage permissions.
+	 *
+	 * <p>
+	 * CLI 2.1.291 no longer lists {@code default} among the {@code --permission-mode}
+	 * choices but still accepts it. {@link #MANUAL} is its new name.
+	 * </p>
 	 */
 	DEFAULT("default"),
 
@@ -39,9 +50,38 @@ public enum PermissionMode {
 
 	/**
 	 * Dangerously skip all permission checks. Recommended only for sandboxes with no
-	 * internet access.
+	 * internet access. Sent as {@code --dangerously-skip-permissions}, not as a
+	 * {@code --permission-mode} value.
 	 */
-	DANGEROUSLY_SKIP_PERMISSIONS("dangerously-skip-permissions");
+	DANGEROUSLY_SKIP_PERMISSIONS("dangerously-skip-permissions"),
+
+	/**
+	 * Prompt for tool usage permissions; the name newer CLIs list for {@link #DEFAULT}.
+	 * The session's init message reports it as {@code default}.
+	 */
+	MANUAL("manual"),
+
+	/**
+	 * Let the CLI decide tool permissions automatically.
+	 *
+	 * <p>
+	 * Not every model supports it. On one that does not, the CLI silently falls back to
+	 * {@code default}: the session's init message then reports
+	 * {@code permissionMode: "default"} rather than failing (observed with Haiku on CLI
+	 * 2.1.291).
+	 * </p>
+	 */
+	AUTO("auto"),
+
+	/**
+	 * Deny any tool use that is not pre-approved, instead of prompting.
+	 */
+	DONT_ASK("dontAsk"),
+
+	/**
+	 * Plan mode - Claude can analyze but not modify files or run commands.
+	 */
+	PLAN("plan");
 
 	private final String value;
 
@@ -51,6 +91,14 @@ public enum PermissionMode {
 
 	public String getValue() {
 		return value;
+	}
+
+	/**
+	 * Whether this mode is passed as {@code --permission-mode <value>}. Only
+	 * {@link #DANGEROUSLY_SKIP_PERMISSIONS} is not: it is a flag of its own.
+	 */
+	public boolean isPermissionModeValue() {
+		return this != DANGEROUSLY_SKIP_PERMISSIONS;
 	}
 
 	/**
