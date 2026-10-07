@@ -335,7 +335,9 @@ public interface ClaudeAsyncClient {
 
 	/**
 	 * Interrupts the current Claude operation.
-	 * @return Mono that completes when the interrupt has been sent
+	 * @return Mono that completes once the CLI accepts the interrupt, and fails with a
+	 * {@link io.github.markpollack.claude.agent.sdk.exceptions.ClaudeSDKException} if it
+	 * refuses or does not reply within the client timeout
 	 */
 	Mono<Void> interrupt();
 
@@ -343,14 +345,18 @@ public interface ClaudeAsyncClient {
 	 * Sets the permission mode for tool execution.
 	 * @param mode the permission mode (e.g., "default", "acceptEdits",
 	 * "bypassPermissions")
-	 * @return Mono that completes when the mode has been set
+	 * @return Mono that completes once the CLI accepts the mode, and fails with a
+	 * {@link io.github.markpollack.claude.agent.sdk.exceptions.ClaudeSDKException} if it
+	 * refuses or does not reply within the client timeout
 	 */
 	Mono<Void> setPermissionMode(String mode);
 
 	/**
 	 * Changes the Claude model during the session.
 	 * @param model the model ID to switch to
-	 * @return Mono that completes when the model has been changed
+	 * @return Mono that completes once the CLI accepts the model, and fails with a
+	 * {@link io.github.markpollack.claude.agent.sdk.exceptions.ClaudeSDKException} if it
+	 * refuses or does not reply within the client timeout
 	 */
 	Mono<Void> setModel(String model);
 

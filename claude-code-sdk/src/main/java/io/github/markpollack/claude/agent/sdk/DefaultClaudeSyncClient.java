@@ -39,7 +39,6 @@ import io.github.markpollack.claude.agent.sdk.types.control.ControlRequest;
 import io.github.markpollack.claude.agent.sdk.types.control.ControlResponse;
 import io.github.markpollack.claude.agent.sdk.types.control.HookEvent;
 import io.github.markpollack.claude.agent.sdk.types.control.HookInput;
-import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
 import io.github.markpollack.claude.agent.sdk.permission.PermissionResult;
 import io.github.markpollack.claude.agent.sdk.permission.ToolPermissionCallback;
 import io.github.markpollack.claude.agent.sdk.permission.ToolPermissionContext;
@@ -485,34 +484,8 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 
 	private ControlResponse handleHookCallback(String requestId, ControlRequest.HookCallbackRequest hookCallback) {
 		try {
-			String callbackId = hookCallback.callbackId();
-			Map<String, Object> inputMap = hookCallback.input();
-
-			HookInput input = objectMapper.convertValue(inputMap, HookInput.class);
-			HookOutput output = hookRegistry.executeHook(callbackId, input);
-
-			Map<String, Object> responsePayload = new LinkedHashMap<>();
-			responsePayload.put("continue", output.continueExecution());
-			if (output.decision() != null) {
-				responsePayload.put("decision", output.decision());
-			}
-			if (output.reason() != null) {
-				responsePayload.put("reason", output.reason());
-			}
-			if (output.hookSpecificOutput() != null) {
-				HookOutput.HookSpecificOutput specific = output.hookSpecificOutput();
-				if (specific.permissionDecision() != null) {
-					responsePayload.put("permission_decision", specific.permissionDecision());
-				}
-				if (specific.permissionDecisionReason() != null) {
-					responsePayload.put("permission_decision_reason", specific.permissionDecisionReason());
-				}
-				if (specific.updatedInput() != null) {
-					responsePayload.put("updated_input", specific.updatedInput());
-				}
-			}
-
-			return ControlResponse.success(requestId, responsePayload);
+			HookInput input = objectMapper.convertValue(hookCallback.input(), HookInput.class);
+			return hookRegistry.handleCallback(requestId, hookCallback.callbackId(), input);
 		}
 		catch (Exception e) {
 			logger.error("Error executing hook callback", e);

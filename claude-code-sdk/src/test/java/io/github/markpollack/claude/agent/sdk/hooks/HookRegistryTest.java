@@ -16,11 +16,14 @@
 
 package io.github.markpollack.claude.agent.sdk.hooks;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import io.github.markpollack.claude.agent.sdk.types.control.ControlRequest;
+import io.github.markpollack.claude.agent.sdk.types.control.ControlResponse;
 import io.github.markpollack.claude.agent.sdk.types.control.HookEvent;
 import io.github.markpollack.claude.agent.sdk.types.control.HookInput;
 import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
@@ -369,6 +372,166 @@ class HookRegistryTest {
 
 			// Then
 			assertThat(config).containsKeys("PreToolUse", "PostToolUse", "UserPromptSubmit");
+		}
+
+	}
+
+	/**
+	 * The response to a {@code hook_callback} must be the CLI's hook JSON output format:
+	 * {@code hookSpecificOutput} nested with camelCase keys, unset fields absent. The CLI
+	 * rejects {@code "continue": null} and ignores unknown keys, and either one silently
+	 * drops the hook's decision.
+	 */
+	@Nested
+	@DisplayName("Hook Callback Response")
+	class HookCallbackResponseTests {
+
+		private static final String DENY_JSON = """
+				{"hookSpecificOutput": {
+				  "hookEventName": "PreToolUse",
+				  "permissionDecision": "deny",
+				  "permissionDecisionReason": "branch changes are blocked"}}
+				""";
+
+		private final ObjectMapper mapper = new ObjectMapper();
+
+		private final HookInput preToolUseInput = new HookInput.PreToolUseInput("PreToolUse", "sess_1", "/tmp/t.md",
+				"/home", null, "Bash", "tool_123", Map.of("command", "git switch -c probe"));
+
+		@Test
+		@DisplayName("A PreToolUse deny is sent nested, camelCase, with no continue")
+		void preToolUseDeny() throws Exception {
+			String id = registry.registerPreToolUse("Bash",
+					input -> HookOutput.builder()
+						.hookSpecificOutput(HookOutput.HookSpecificOutput.preToolUseDeny("branch changes are blocked"))
+						.build());
+
+			JsonNode wire = wire(registry.handleCallback("req_1", id, preToolUseInput));
+
+			assertThat(wire.at("/response/subtype").asText()).isEqualTo("success");
+			assertThat(wire.at("/response/request_id").asText()).isEqualTo("req_1");
+			assertThat(wire.at("/response/response")).isEqualTo(mapper.readTree(DENY_JSON));
+		}
+
+		@Test
+		@DisplayName("A PreToolUse allow is sent with its decision and reason")
+		void preToolUseAllow() throws Exception {
+			String id = registry.registerPreToolUse("Bash",
+					input -> HookOutput.builder()
+						.continueExecution(true)
+						.hookSpecificOutput(HookOutput.HookSpecificOutput.preToolUseAllow("read-only command"))
+						.build());
+
+			assertThat(sent(id)).isEqualTo(mapper.readTree("""
+					{"continue": true,
+					 "hookSpecificOutput": {
+					   "hookEventName": "PreToolUse",
+					   "permissionDecision": "allow",
+					   "permissionDecisionReason": "read-only command"}}
+					"""));
+		}
+
+		@Test
+		@DisplayName("A PreToolUse updatedInput is sent nested as updatedInput")
+		void preToolUseModify() throws Exception {
+			String id = registry.registerPreToolUse("Bash",
+					input -> HookOutput.builder()
+						.hookSpecificOutput(
+								HookOutput.HookSpecificOutput.preToolUseModify(Map.of("command", "git status")))
+						.build());
+
+			assertThat(sent(id)).isEqualTo(mapper.readTree("""
+					{"hookSpecificOutput": {
+					  "hookEventName": "PreToolUse",
+					  "updatedInput": {"command": "git status"}}}
+					"""));
+		}
+
+		@Test
+		@DisplayName("PostToolUse and UserPromptSubmit additionalContext are sent nested")
+		void additionalContext() throws Exception {
+			String post = registry.registerPostToolUse(input -> HookOutput.builder()
+				.hookSpecificOutput(HookOutput.HookSpecificOutput.postToolUse("the build is red"))
+				.build());
+			String prompt = registry.registerUserPromptSubmit(input -> HookOutput.builder()
+				.hookSpecificOutput(HookOutput.HookSpecificOutput.userPromptSubmit("today is release day"))
+				.build());
+
+			assertThat(sent(post)).isEqualTo(mapper.readTree("""
+					{"hookSpecificOutput": {
+					  "hookEventName": "PostToolUse",
+					  "additionalContext": "the build is red"}}
+					"""));
+			assertThat(sent(prompt)).isEqualTo(mapper.readTree("""
+					{"hookSpecificOutput": {
+					  "hookEventName": "UserPromptSubmit",
+					  "additionalContext": "today is release day"}}
+					"""));
+		}
+
+		@Test
+		@DisplayName("The top-level control fields keep their names")
+		void topLevelFields() throws Exception {
+			String id = registry.registerPreToolUse("Bash",
+					input -> HookOutput.builder()
+						.continueExecution(false)
+						.stopReason("policy stop")
+						.suppressOutput(true)
+						.systemMessage("stopped by policy")
+						.decision("block")
+						.reason("not allowed")
+						.build());
+
+			assertThat(sent(id)).isEqualTo(mapper.readTree("""
+					{"continue": false, "suppressOutput": true, "stopReason": "policy stop",
+					 "decision": "block", "systemMessage": "stopped by policy", "reason": "not allowed"}
+					"""));
+		}
+
+		@Test
+		@DisplayName("A missing hookEventName is filled in from the registration")
+		void missingEventName() throws Exception {
+			String id = registry.registerPreToolUse("Bash",
+					input -> HookOutput.builder()
+						.hookSpecificOutput(HookOutput.HookSpecificOutput.builder()
+							.permissionDecision("deny")
+							.permissionDecisionReason("branch changes are blocked")
+							.build())
+						.build());
+
+			assertThat(sent(id)).isEqualTo(mapper.readTree(DENY_JSON));
+		}
+
+		@Test
+		@DisplayName("A hookEventName for another event is sent as the hook returned it")
+		void mismatchedEventName() throws Exception {
+			String id = registry.registerPostToolUse(input -> HookOutput.builder()
+				.hookSpecificOutput(HookOutput.HookSpecificOutput.preToolUseDeny("wrong event"))
+				.build());
+
+			assertThat(sent(id).at("/hookSpecificOutput/hookEventName").asText()).isEqualTo("PreToolUse");
+		}
+
+		@Test
+		@DisplayName("An unknown callback ID is answered with an error")
+		void unknownCallback() throws Exception {
+			JsonNode wire = wire(registry.handleCallback("req_7", "hook_missing", preToolUseInput));
+
+			assertThat(wire.at("/response/subtype").asText()).isEqualTo("error");
+			assertThat(wire.at("/response/request_id").asText()).isEqualTo("req_7");
+			assertThat(wire.at("/response/error").asText()).contains("hook_missing");
+		}
+
+		/**
+		 * The hook output {@code handleCallback} sends for the hook registered under
+		 * {@code id}.
+		 */
+		private JsonNode sent(String id) throws Exception {
+			return wire(registry.handleCallback("req", id, preToolUseInput)).at("/response/response");
+		}
+
+		private JsonNode wire(ControlResponse response) throws Exception {
+			return mapper.readTree(mapper.writeValueAsString(response));
 		}
 
 	}

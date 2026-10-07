@@ -25,9 +25,10 @@ import java.util.Map;
  * Output from a hook execution. Sent back to CLI as part of control response.
  *
  * <p>
- * Field naming note: Java uses camelCase but the protocol uses snake_case.
- * Jackson @JsonProperty handles the conversion. Additionally, "continue" and "async" are
- * Java keywords, so we use alternative names that get serialized correctly.
+ * Serializes to the CLI's hook JSON output format, the same one a command hook prints:
+ * camelCase keys, with {@link HookSpecificOutput} nested under
+ * {@code hookSpecificOutput}, and unset fields omitted. "continue" and "async" are Java
+ * keywords, so their components use alternative names that @JsonProperty maps back.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record HookOutput(
@@ -78,6 +79,14 @@ public record HookOutput(
 	 */
 	public static HookOutput async(int timeoutMs) {
 		return builder().asyncExecution(true).asyncTimeout(timeoutMs).continueExecution(true).build();
+	}
+
+	/**
+	 * Returns a copy of this output with {@code hookSpecificOutput} replaced.
+	 */
+	public HookOutput withHookSpecificOutput(HookSpecificOutput hookSpecificOutput) {
+		return new HookOutput(continueExecution, suppressOutput, stopReason, decision, systemMessage, reason,
+				asyncExecution, asyncTimeout, hookSpecificOutput);
 	}
 
 	/**
@@ -223,6 +232,14 @@ public record HookOutput(
 		 */
 		public static HookSpecificOutput userPromptSubmit(String additionalContext) {
 			return new HookSpecificOutput("UserPromptSubmit", null, null, null, additionalContext);
+		}
+
+		/**
+		 * Returns a copy of this output with {@code hookEventName} replaced.
+		 */
+		public HookSpecificOutput withHookEventName(String hookEventName) {
+			return new HookSpecificOutput(hookEventName, permissionDecision, permissionDecisionReason, updatedInput,
+					additionalContext);
 		}
 
 		/**

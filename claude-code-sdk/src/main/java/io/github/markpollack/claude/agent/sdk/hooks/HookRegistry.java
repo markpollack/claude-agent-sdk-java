@@ -19,6 +19,7 @@ package io.github.markpollack.claude.agent.sdk.hooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.github.markpollack.claude.agent.sdk.types.control.ControlRequest;
+import io.github.markpollack.claude.agent.sdk.types.control.ControlResponse;
 import io.github.markpollack.claude.agent.sdk.types.control.HookEvent;
 import io.github.markpollack.claude.agent.sdk.types.control.HookInput;
 import io.github.markpollack.claude.agent.sdk.types.control.HookOutput;
@@ -247,18 +248,73 @@ public class HookRegistry {
 			logger.warn("Hook not found: {}", hookId);
 			return null;
 		}
+		return execute(registration, input);
+	}
 
+	private HookOutput execute(HookRegistration registration, HookInput input) {
 		try {
-			logger.debug("Executing hook: id={}, event={}", hookId, registration.event());
+			logger.debug("Executing hook: id={}, event={}", registration.id(), registration.event());
 			HookOutput output = registration.callback().handle(input);
-			logger.debug("Hook result: id={}, continue={}", hookId, output.continueExecution());
+			logger.debug("Hook result: id={}, continue={}", registration.id(), output.continueExecution());
 			return output;
 		}
 		catch (Exception e) {
-			logger.error("Hook execution failed: id={}", hookId, e);
+			logger.error("Hook execution failed: id={}", registration.id(), e);
 			// Return a safe default on error
 			return HookOutput.block("Hook execution failed: " + e.getMessage());
 		}
+	}
+
+	/**
+	 * Executes the hook a {@code hook_callback} control request names and wraps its
+	 * output in the control response the CLI expects.
+	 *
+	 * <p>
+	 * The CLI validates the response against the hook JSON output format, the same one a
+	 * command hook prints: {@code continue}, {@code decision}, {@code reason} and the
+	 * other control fields at the top level, and {@code hookSpecificOutput} nested with
+	 * camelCase keys ({@code hookEventName}, {@code permissionDecision},
+	 * {@code updatedInput}, {@code additionalContext}). {@link HookOutput} already
+	 * serializes to exactly that and omits unset fields, so it is sent as is. An unset
+	 * field must be absent rather than null: the CLI rejects {@code "continue": null} and
+	 * then ignores the whole output, deny included.
+	 * </p>
+	 *
+	 * <p>
+	 * The CLI also rejects a {@code hookSpecificOutput} whose {@code hookEventName} is
+	 * not the event it asked for, so a missing name is filled in from the registration. A
+	 * name that differs is the hook's mistake: it is logged and sent as is.
+	 * </p>
+	 * @param requestId the control request ID to answer
+	 * @param hookId the hook ID the CLI asked for
+	 * @param input the hook input
+	 * @return a success response carrying the hook output, or an error response if no
+	 * hook is registered under {@code hookId}
+	 */
+	public ControlResponse handleCallback(String requestId, String hookId, HookInput input) {
+		HookRegistration registration = hooksById.get(hookId);
+		if (registration == null) {
+			logger.warn("Hook not found: {}", hookId);
+			return ControlResponse.error(requestId, "No hook registered for callback ID: " + hookId);
+		}
+		return ControlResponse.success(requestId, withEventName(execute(registration, input), registration));
+	}
+
+	private static HookOutput withEventName(HookOutput output, HookRegistration registration) {
+		HookOutput.HookSpecificOutput specific = output.hookSpecificOutput();
+		if (specific == null) {
+			return output;
+		}
+		String expected = registration.event().getProtocolName();
+		if (specific.hookEventName() == null) {
+			return output.withHookSpecificOutput(specific.withHookEventName(expected));
+		}
+		if (!expected.equals(specific.hookEventName())) {
+			logger.warn(
+					"Hook {} is registered for {} but returned hookSpecificOutput for {}; the CLI will ignore its whole output",
+					registration.id(), expected, specific.hookEventName());
+		}
+		return output;
 	}
 
 	/**
