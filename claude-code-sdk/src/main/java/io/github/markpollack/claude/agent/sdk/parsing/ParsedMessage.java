@@ -43,6 +43,20 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 	/**
 	 * Check if this is a regular message (user, assistant, system, result).
 	 */
+	/**
+	 * The original JSON line this message was parsed from, whatever its kind, or null when
+	 * it was constructed in code or the SDK did not keep it (end of stream has none).
+	 */
+	default String rawJson() {
+		return switch (this) {
+			case RegularMessage m -> m.rawJson();
+			case Control m -> m.rawJson();
+			case ControlResponseMessage m -> m.rawJson();
+			case RateLimitEventMessage m -> m.rawJson();
+			case EndOfStream m -> null;
+		};
+	}
+
 	default boolean isRegularMessage() {
 		return this instanceof RegularMessage;
 	}
@@ -140,7 +154,7 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 	/**
 	 * Wrapper for control protocol requests (type=control_request).
 	 */
-	record Control(ControlRequest request) implements ParsedMessage {
+	record Control(ControlRequest request, String rawJson) implements ParsedMessage {
 		public Control {
 			if (request == null) {
 				throw new IllegalArgumentException("request must not be null");
@@ -151,7 +165,12 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 		 * Factory method for creating a Control message.
 		 */
 		public static Control of(ControlRequest request) {
-			return new Control(request);
+			return new Control(request, null);
+		}
+
+		/** Factory method that also keeps the original JSON line. */
+		public static Control of(ControlRequest request, String rawJson) {
+			return new Control(request, rawJson);
 		}
 	}
 
@@ -160,7 +179,7 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 	 * from the CLI to control requests we sent (e.g., interrupt, set_model,
 	 * set_permission_mode).
 	 */
-	record ControlResponseMessage(ControlResponse response) implements ParsedMessage {
+	record ControlResponseMessage(ControlResponse response, String rawJson) implements ParsedMessage {
 		public ControlResponseMessage {
 			if (response == null) {
 				throw new IllegalArgumentException("response must not be null");
@@ -171,7 +190,12 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 		 * Factory method for creating a ControlResponseMessage.
 		 */
 		public static ControlResponseMessage of(ControlResponse response) {
-			return new ControlResponseMessage(response);
+			return new ControlResponseMessage(response, null);
+		}
+
+		/** Factory method that also keeps the original JSON line. */
+		public static ControlResponseMessage of(ControlResponse response, String rawJson) {
+			return new ControlResponseMessage(response, rawJson);
 		}
 	}
 
@@ -180,7 +204,7 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 	 * carrying quota status and reset timing. Currently informational — the transport
 	 * skips these, but callers can check them for proactive back-off.
 	 */
-	record RateLimitEventMessage(RateLimitEvent event) implements ParsedMessage {
+	record RateLimitEventMessage(RateLimitEvent event, String rawJson) implements ParsedMessage {
 		public RateLimitEventMessage {
 			if (event == null) {
 				throw new IllegalArgumentException("event must not be null");
@@ -191,7 +215,12 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 		 * Factory method for creating a RateLimitEventMessage.
 		 */
 		public static RateLimitEventMessage of(RateLimitEvent event) {
-			return new RateLimitEventMessage(event);
+			return new RateLimitEventMessage(event, null);
+		}
+
+		/** Factory method that also keeps the original JSON line. */
+		public static RateLimitEventMessage of(RateLimitEvent event, String rawJson) {
+			return new RateLimitEventMessage(event, rawJson);
 		}
 	}
 

@@ -162,7 +162,7 @@ public class ControlMessageParser {
 			return parseControlResponse(node, originalJson);
 		}
 		else if (TYPE_RATE_LIMIT_EVENT.equals(type)) {
-			return parseRateLimitEvent(node);
+			return parseRateLimitEvent(node, originalJson);
 		}
 		else {
 			return parseRegularMessage(node, originalJson);
@@ -183,7 +183,7 @@ public class ControlMessageParser {
 			logger.debug("Parsed control request: type={}, subtype={}, requestId={}", request.type(),
 					request.request() != null ? request.request().subtype() : "null", request.requestId());
 
-			return ParsedMessage.Control.of(request);
+			return ParsedMessage.Control.of(request, originalJson);
 		}
 		catch (JsonProcessingException e) {
 			throw new MessageParseException("Failed to parse control request: " + e.getMessage(), e);
@@ -203,7 +203,7 @@ public class ControlMessageParser {
 
 			logger.debug("Parsed control response: subtype={}, requestId={}", subtype, requestId);
 
-			return ParsedMessage.ControlResponseMessage.of(response);
+			return ParsedMessage.ControlResponseMessage.of(response, originalJson);
 		}
 		catch (JsonProcessingException e) {
 			throw new MessageParseException("Failed to parse control response: " + e.getMessage(), e);
@@ -213,14 +213,14 @@ public class ControlMessageParser {
 	/**
 	 * Parses a rate limit event from a JsonNode.
 	 */
-	private ParsedMessage parseRateLimitEvent(JsonNode node) throws MessageParseException {
+	private ParsedMessage parseRateLimitEvent(JsonNode node, String originalJson) throws MessageParseException {
 		try {
 			RateLimitEvent event = objectMapper.treeToValue(node, RateLimitEvent.class);
 			logger.debug("Rate limit event: status={}, type={}, resetsAt={}",
 					event.rateLimitInfo() != null ? event.rateLimitInfo().status() : "unknown",
 					event.rateLimitInfo() != null ? event.rateLimitInfo().rateLimitType() : "unknown",
 					event.rateLimitInfo() != null ? event.rateLimitInfo().resetsAt() : 0);
-			return ParsedMessage.RateLimitEventMessage.of(event);
+			return ParsedMessage.RateLimitEventMessage.of(event, originalJson);
 		}
 		catch (JsonProcessingException e) {
 			throw new MessageParseException("Failed to parse rate_limit_event: " + e.getMessage(), e);

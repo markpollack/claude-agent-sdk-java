@@ -173,6 +173,9 @@ public class StreamingTransport implements AutoCloseable {
 
 	private volatile BufferedReader stdoutReader;
 
+	/** Receives every stdout line exactly as read, before it is trimmed, skipped or parsed. */
+	private volatile Consumer<String> rawLineListener;
+
 	private volatile BufferedReader stderrReader;
 
 	// Synchronization for stdin writes (belt-and-suspenders with outbound scheduler)
@@ -332,6 +335,7 @@ public class StreamingTransport implements AutoCloseable {
 
 			// Store stderr handler for this session
 			this.currentStderrHandler = options.getStderrHandler();
+			this.rawLineListener = options.rawLineListener();
 
 			// Store tool permission callback for this session
 			this.currentToolPermissionCallback = options.getToolPermissionCallback();
@@ -763,6 +767,15 @@ public class StreamingTransport implements AutoCloseable {
 			// Use isClosing flag for clean shutdown (MCP pattern)
 			logger.debug("Starting message processing loop, isClosing={}", isClosing);
 			while (!isClosing && (line = stdoutReader.readLine()) != null) {
+				Consumer<String> rawListener = rawLineListener;
+				if (rawListener != null) {
+					try {
+						rawListener.accept(line);
+					}
+					catch (RuntimeException e) {
+						logger.warn("Raw line listener failed (continuing): {}", e.getMessage());
+					}
+				}
 				line = line.trim();
 				if (line.isEmpty()) {
 					continue;

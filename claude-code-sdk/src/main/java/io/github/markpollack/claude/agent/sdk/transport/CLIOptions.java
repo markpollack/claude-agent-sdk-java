@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Configuration options for Claude CLI commands. Corresponds to ClaudeAgentOptions in
@@ -45,7 +46,7 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		List<PluginConfig> plugins, Map<String, String> env, Integer maxBufferSize, String user,
 		StderrHandler stderrHandler, ToolPermissionCallback toolPermissionCallback,
 		// Stream content options
-		boolean forwardSubagentText, boolean includeHookEvents,
+		boolean forwardSubagentText, boolean includeHookEvents, Consumer<String> rawLineListener,
 		// CLI-side conversation and posture policy
 		String autocompact, boolean safeMode) {
 
@@ -113,7 +114,7 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		return new CLIOptions(null, null, null, null, Duration.ofMinutes(2), null, List.of(), List.of(),
 				PermissionMode.DANGEROUSLY_SKIP_PERMISSIONS, false, OutputFormat.JSON, List.of(), null, false, false,
 				null, Map.of(), null, null, null, null, false, null, List.of(), null, null, Map.of(), List.of(),
-				Map.of(), null, null, null, null, false, false, null, false);
+				Map.of(), null, null, null, null, false, false, null, null, false);
 	}
 
 	// Convenience getters
@@ -343,6 +344,8 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		private boolean forwardSubagentText = false;
 
 		private boolean includeHookEvents = false;
+
+		private Consumer<String> rawLineListener;
 
 		private String autocompact;
 
@@ -716,6 +719,21 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		}
 
 		/**
+		 * Sets a listener that receives every line the CLI writes to standard output,
+		 * exactly as read, before the SDK trims, skips or parses it. Blank lines, message
+		 * types the SDK does not know, lines that fail to parse and the partial last line of
+		 * a killed process all reach the listener, so a consumer can keep the CLI's output
+		 * byte for byte. The listener runs on the transport's reader thread, so it should
+		 * return quickly; an exception it throws is logged and does not stop the stream.
+		 * @param rawLineListener the listener, or null for none
+		 * @return this builder
+		 */
+		public Builder rawLineListener(Consumer<String> rawLineListener) {
+			this.rawLineListener = rawLineListener;
+			return this;
+		}
+
+		/**
 		 * Sets whether hook lifecycle events are included in the message stream
 		 * (--include-hook-events).
 		 *
@@ -771,7 +789,7 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 					includePartialMessages, jsonSchema, mcpServers, maxTurns, maxBudgetUsd, fallbackModel,
 					appendSystemPrompt, continueConversation, resume, addDirs, settings, permissionPromptToolName,
 					extraArgs, plugins, env, maxBufferSize, user, stderrHandler, toolPermissionCallback,
-					forwardSubagentText, includeHookEvents, autocompact, safeMode);
+					forwardSubagentText, includeHookEvents, rawLineListener, autocompact, safeMode);
 		}
 
 	}
