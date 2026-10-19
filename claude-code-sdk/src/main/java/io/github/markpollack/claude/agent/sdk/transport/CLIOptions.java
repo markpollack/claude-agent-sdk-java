@@ -719,12 +719,15 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		}
 
 		/**
-		 * Sets a listener that receives every line the CLI writes to standard output,
-		 * exactly as read, before the SDK trims, skips or parses it. Blank lines, message
-		 * types the SDK does not know, lines that fail to parse and the partial last line of
-		 * a killed process all reach the listener, so a consumer can keep the CLI's output
-		 * byte for byte. The listener runs on the transport's reader thread, so it should
-		 * return quickly; an exception it throws is logged and does not stop the stream.
+		 * Sets a listener that receives every line the CLI writes to standard output
+		 * before the SDK trims, skips or parses it. Blank lines, message types the SDK does
+		 * not know, lines that fail to parse and the partial last line of a killed process
+		 * all reach the listener. Each line arrives as the transport's reader delivers it:
+		 * decoded to text with its line terminator removed, otherwise unchanged, so a
+		 * consumer can keep the CLI's output character for character. A partial last line
+		 * is delivered like any other. The listener runs on the transport's reader thread,
+		 * so it should return quickly; an exception it throws is logged and does not stop
+		 * the stream.
 		 * @param rawLineListener the listener, or null for none
 		 * @return this builder
 		 */

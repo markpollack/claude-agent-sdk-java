@@ -41,9 +41,6 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 		ParsedMessage.ControlResponseMessage, ParsedMessage.RateLimitEventMessage, ParsedMessage.EndOfStream {
 
 	/**
-	 * Check if this is a regular message (user, assistant, system, result).
-	 */
-	/**
 	 * The original JSON line this message was parsed from, whatever its kind, or null when
 	 * it was constructed in code or the SDK did not keep it (end of stream has none).
 	 */
@@ -57,6 +54,9 @@ public sealed interface ParsedMessage permits ParsedMessage.RegularMessage, Pars
 		};
 	}
 
+	/**
+	 * Check if this is a regular message (user, assistant, system, result).
+	 */
 	default boolean isRegularMessage() {
 		return this instanceof RegularMessage;
 	}

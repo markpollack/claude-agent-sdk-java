@@ -17,9 +17,10 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The raw line listener sees every line the CLI wrote to standard output exactly as read: the
- * blank line, the line with surrounding spaces, the message type the SDK does not know, the line
- * that is not valid JSON and the partial last line without a line break. The stub CLI is a shell
+ * The raw line listener sees every line the CLI wrote to standard output as the reader delivers
+ * it, line terminator removed and otherwise unchanged: the blank line, the line with surrounding
+ * spaces, the message type the SDK does not know, the line that is not valid JSON and the partial
+ * last line without a line break. The stub CLI is a shell
  * script, so no agent CLI is invoked.
  */
 class StreamingTransportRawLineTest {
