@@ -173,10 +173,17 @@ public class StreamingTransport implements AutoCloseable {
 
 	private volatile BufferedReader stdoutReader;
 
-	/** Receives every stdout line exactly as read, before it is trimmed, skipped or parsed. */
+	/**
+	 * Receives every stdout line exactly as read, before it is trimmed, skipped or
+	 * parsed.
+	 */
 	private volatile Consumer<String> rawLineListener;
 
 	private volatile BufferedReader stderrReader;
+
+	private volatile TransportByteObserver transportByteObserver;
+
+	private volatile CountDownLatch readersFinished = new CountDownLatch(0);
 
 	// Synchronization for stdin writes (belt-and-suspenders with outbound scheduler)
 	private final Object stdinLock = new Object();
@@ -336,6 +343,7 @@ public class StreamingTransport implements AutoCloseable {
 			// Store stderr handler for this session
 			this.currentStderrHandler = options.getStderrHandler();
 			this.rawLineListener = options.rawLineListener();
+			this.transportByteObserver = options.transportByteObserver();
 
 			// Store tool permission callback for this session
 			this.currentToolPermissionCallback = options.getToolPermissionCallback();
@@ -365,9 +373,18 @@ public class StreamingTransport implements AutoCloseable {
 			process = pb.start();
 
 			// Setup streams
-			stdinWriter = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
-			stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-			stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8));
+			OutputStream stdin = process.getOutputStream();
+			InputStream stdout = process.getInputStream();
+			InputStream stderr = process.getErrorStream();
+			if (transportByteObserver != null) {
+				stdin = ObservedStreams.output(stdin, this::observeBytes);
+				stdout = ObservedStreams.input(stdout, TransportByteObserver.Stream.STDOUT, this::observeBytes);
+				stderr = ObservedStreams.input(stderr, TransportByteObserver.Stream.STDERR, this::observeBytes);
+			}
+			stdinWriter = new BufferedWriter(new OutputStreamWriter(stdin, StandardCharsets.UTF_8));
+			stdoutReader = new BufferedReader(new InputStreamReader(stdout, StandardCharsets.UTF_8));
+			stderrReader = new BufferedReader(new InputStreamReader(stderr, StandardCharsets.UTF_8));
+			readersFinished = new CountDownLatch(2);
 
 			// Start inbound message processing on dedicated scheduler (MCP pattern)
 			// Using scheduler.schedule() instead of Mono.subscribeOn() for immediate
@@ -400,7 +417,7 @@ public class StreamingTransport implements AutoCloseable {
 		catch (Exception e) {
 			// Revert state on failure
 			state.set(STATE_DISCONNECTED);
-			sessionError.set(e);
+			recordSessionError(e);
 			if (e instanceof ClaudeSDKException) {
 				throw (ClaudeSDKException) e;
 			}
@@ -766,7 +783,12 @@ public class StreamingTransport implements AutoCloseable {
 			String line;
 			// Use isClosing flag for clean shutdown (MCP pattern)
 			logger.debug("Starting message processing loop, isClosing={}", isClosing);
-			while (!isClosing && (line = stdoutReader.readLine()) != null) {
+			while ((transportByteObserver != null || !isClosing) && (line = stdoutReader.readLine()) != null) {
+				if (isClosing && transportByteObserver != null) {
+					// Capture remaining bytes while closing, without dispatching more
+					// protocol work.
+					continue;
+				}
 				Consumer<String> rawListener = rawLineListener;
 				if (rawListener != null) {
 					try {
@@ -847,12 +869,13 @@ public class StreamingTransport implements AutoCloseable {
 			}
 		}
 		catch (IOException e) {
-			if (!isClosing) {
-				sessionError.set(e);
+			if (!isClosing || transportByteObserver != null) {
+				recordSessionError(e);
 				logger.error("Error reading from stdout", e);
 			}
 		}
 		finally {
+			readersFinished.countDown();
 			logger.debug("processInboundMessages finally block, setting isClosing=true");
 			isClosing = true;
 			inboundSink.tryEmitComplete();
@@ -884,7 +907,7 @@ public class StreamingTransport implements AutoCloseable {
 			}
 			catch (IOException e) {
 				logger.error("Error writing to stdin", e);
-				sessionError.set(e);
+				recordSessionError(e);
 			}
 		}
 	}
@@ -895,7 +918,10 @@ public class StreamingTransport implements AutoCloseable {
 	private void readStderr() {
 		try {
 			String line;
-			while (!isClosing && (line = stderrReader.readLine()) != null) {
+			while ((transportByteObserver != null || !isClosing) && (line = stderrReader.readLine()) != null) {
+				if (isClosing && transportByteObserver != null) {
+					continue;
+				}
 				// Use custom handler if provided, otherwise log at warn level
 				if (currentStderrHandler != null) {
 					currentStderrHandler.handle(line);
@@ -906,9 +932,52 @@ public class StreamingTransport implements AutoCloseable {
 			}
 		}
 		catch (IOException e) {
+			if (transportByteObserver != null) {
+				recordSessionError(e);
+			}
 			if (!isClosing) {
 				logger.debug("Error reading stderr", e);
 			}
+		}
+		finally {
+			readersFinished.countDown();
+		}
+	}
+
+	private void recordSessionError(Throwable error) {
+		if (transportByteObserver == null) {
+			sessionError.set(error);
+		}
+		else {
+			sessionError.compareAndSet(null, error);
+		}
+	}
+
+	private void observeBytes(TransportByteObserver.Stream stream, byte[] bytes) throws IOException {
+		try {
+			transportByteObserver.onBytes(stream, bytes);
+		}
+		catch (IOException | RuntimeException failure) {
+			IOException error = new IOException("Byte observer failed for " + stream, failure);
+			// Retain capture errors even during close, before the I/O loop handles them.
+			sessionError.compareAndSet(null, error);
+			throw error;
+		}
+	}
+
+	private boolean awaitObservedReaders(long timeoutNanos) throws InterruptedException {
+		return transportByteObserver == null || readersFinished.await(Math.max(0, timeoutNanos), TimeUnit.NANOSECONDS);
+	}
+
+	private void finishObservedReaders() {
+		try {
+			if (!awaitObservedReaders(TimeUnit.SECONDS.toNanos(5))) {
+				sessionError.compareAndSet(null, new IOException("Timed out draining observed process streams"));
+			}
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			recordSessionError(e);
 		}
 	}
 
@@ -1072,7 +1141,11 @@ public class StreamingTransport implements AutoCloseable {
 		}
 
 		try {
+			long started = System.nanoTime();
 			boolean completed = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
+			if (completed) {
+				completed = awaitObservedReaders(timeout.toNanos() - (System.nanoTime() - started));
+			}
 
 			if (completed) {
 				int exitCode = process.exitValue();
@@ -1167,6 +1240,9 @@ public class StreamingTransport implements AutoCloseable {
 				destroyProcessTree(process);
 			}
 
+			// Drain observed readers after process termination, before closing their
+			// streams.
+			finishObservedReaders();
 			// Close transport resources
 			closeStreams();
 			return Mono.empty();
@@ -1215,6 +1291,8 @@ public class StreamingTransport implements AutoCloseable {
 			destroyProcessTree(process);
 		}
 
+		// Drain observed readers after process termination, before closing their streams.
+		finishObservedReaders();
 		// Close streams
 		closeStreams();
 

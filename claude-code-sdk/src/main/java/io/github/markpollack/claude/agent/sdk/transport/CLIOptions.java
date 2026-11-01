@@ -48,7 +48,7 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		// Stream content options
 		boolean forwardSubagentText, boolean includeHookEvents, Consumer<String> rawLineListener,
 		// CLI-side conversation and posture policy
-		String autocompact, boolean safeMode) {
+		String autocompact, boolean safeMode, TransportByteObserver transportByteObserver) {
 
 	/** Default maximum buffer size for JSON parsing (1MB). */
 	public static final int DEFAULT_MAX_BUFFER_SIZE = 1024 * 1024;
@@ -114,7 +114,7 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		return new CLIOptions(null, null, null, null, Duration.ofMinutes(2), null, List.of(), List.of(),
 				PermissionMode.DANGEROUSLY_SKIP_PERMISSIONS, false, OutputFormat.JSON, List.of(), null, false, false,
 				null, Map.of(), null, null, null, null, false, null, List.of(), null, null, Map.of(), List.of(),
-				Map.of(), null, null, null, null, false, false, null, null, false);
+				Map.of(), null, null, null, null, false, false, null, null, false, null);
 	}
 
 	// Convenience getters
@@ -346,6 +346,8 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		private boolean includeHookEvents = false;
 
 		private Consumer<String> rawLineListener;
+
+		private TransportByteObserver transportByteObserver;
 
 		private String autocompact;
 
@@ -720,19 +722,30 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 
 		/**
 		 * Sets a listener that receives every line the CLI writes to standard output
-		 * before the SDK trims, skips or parses it. Blank lines, message types the SDK does
-		 * not know, lines that fail to parse and the partial last line of a killed process
-		 * all reach the listener. Each line arrives as the transport's reader delivers it:
-		 * decoded to text with its line terminator removed, otherwise unchanged, so a
-		 * consumer can keep the CLI's output character for character. A partial last line
-		 * is delivered like any other. The listener runs on the transport's reader thread,
-		 * so it should return quickly; an exception it throws is logged and does not stop
-		 * the stream.
+		 * before the SDK trims, skips or parses it. Blank lines, message types the SDK
+		 * does not know, lines that fail to parse and the partial last line of a killed
+		 * process all reach the listener. Each line arrives as the transport's reader
+		 * delivers it: decoded to text with its line terminator removed, otherwise
+		 * unchanged, so a consumer can keep the CLI's output character for character. A
+		 * partial last line is delivered like any other. The listener runs on the
+		 * transport's reader thread, so it should return quickly; an exception it throws
+		 * is logged and does not stop the stream.
 		 * @param rawLineListener the listener, or null for none
 		 * @return this builder
 		 */
 		public Builder rawLineListener(Consumer<String> rawLineListener) {
 			this.rawLineListener = rawLineListener;
+			return this;
+		}
+
+		/**
+		 * Observes original process bytes, independently of message parsing. See
+		 * {@link TransportByteObserver} for ownership, concurrency and failure semantics.
+		 * @param observer the observer, or null to disable byte observation
+		 * @return this builder
+		 */
+		public Builder transportByteObserver(TransportByteObserver observer) {
+			this.transportByteObserver = observer;
 			return this;
 		}
 
@@ -760,10 +773,11 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 		 * Sets the auto-compact window sizing policy (--autocompact).
 		 *
 		 * <p>
-		 * Accepts {@code "auto"} or a token count. This is a CLI-side conversation policy;
-		 * no SDK behaviour depends on it.
+		 * Accepts {@code "auto"} or a token count. This is a CLI-side conversation
+		 * policy; no SDK behaviour depends on it.
 		 * </p>
-		 * @param autocompact {@code "auto"} or a token count, or null to leave the flag off
+		 * @param autocompact {@code "auto"} or a token count, or null to leave the flag
+		 * off
 		 * @return this builder
 		 */
 		public Builder autocompact(String autocompact) {
@@ -792,7 +806,8 @@ public record CLIOptions(String model, String systemPrompt, Integer maxTokens, I
 					includePartialMessages, jsonSchema, mcpServers, maxTurns, maxBudgetUsd, fallbackModel,
 					appendSystemPrompt, continueConversation, resume, addDirs, settings, permissionPromptToolName,
 					extraArgs, plugins, env, maxBufferSize, user, stderrHandler, toolPermissionCallback,
-					forwardSubagentText, includeHookEvents, rawLineListener, autocompact, safeMode);
+					forwardSubagentText, includeHookEvents, rawLineListener, autocompact, safeMode,
+					transportByteObserver);
 		}
 
 	}

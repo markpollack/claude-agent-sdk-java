@@ -85,3 +85,37 @@ the CLI ships that this SDK has not modelled, remain reachable through
 ## License
 
 [Apache License 2.0](LICENSE).
+
+## Observing process bytes
+
+An optional per-session observer receives original process stdout/stderr before UTF-8
+decoding and stdin after each successful encoded write:
+
+```java
+CLIOptions options = CLIOptions.builder()
+    .transportByteObserver((stream, bytes) -> recorder.append(stream, bytes))
+    .build();
+```
+
+`TransportByteObserver` and `CLIOptions` are in
+`io.github.markpollack.claude.agent.sdk.transport`. Its `Stream` values are `STDIN`,
+`STDOUT`, and `STDERR`; `onBytes(Stream, byte[])` may throw `IOException`. Each nonempty
+array belongs to the observer and may be retained or modified. Callbacks run synchronously,
+in order within each stream, and may run concurrently across streams. Return promptly;
+do not call SDK lifecycle methods from a callback. Chunks are not protocol frames and a
+successful stdin write does not prove the child consumed it.
+
+The caller owns recording files, offsets, timestamps, final flushing/closing and capture
+status. Latch recording errors before throwing from the callback and check that latch
+and final flush/close results before sealing a recording, including when using
+`ClaudeSyncClient`. The transport retains observer failures through `getSessionError()`;
+a successful model response alone does not establish complete capture. Cancellation can
+truncate output, and the hook makes no durability or native-session acquisition guarantee.
+With an observer, normal process completion drains both readers before
+`waitForCompletion` succeeds. Closing terminates the process first and waits for readers;
+blocking caller callbacks can delay shutdown.
+
+`rawLineListener` remains the decoded, terminator-free stdout API. The byte observer is
+independent of it and of typed message coverage. Adding the observer component changes
+`CLIOptions`' canonical record constructor and record patterns; builder callers retain
+the existing construction path.
