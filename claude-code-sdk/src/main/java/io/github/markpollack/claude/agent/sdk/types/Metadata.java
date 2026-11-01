@@ -96,7 +96,7 @@ public record Metadata(@JsonProperty("model") String model,
 	}
 
 	/**
-	 * Returns true if the response was fast (< 2 seconds).
+	 * Returns true if the response was fast (&lt; 2 seconds).
 	 */
 	public boolean isFastResponse() {
 		return durationMs < 2000;

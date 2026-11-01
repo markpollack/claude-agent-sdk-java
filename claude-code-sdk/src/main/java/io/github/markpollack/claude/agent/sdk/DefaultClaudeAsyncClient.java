@@ -130,7 +130,7 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	 *
 	 * <p>
 	 * <b>Pattern:</b> Each {@link #receiveResponse()} call creates a fresh unicast sink
-	 * via {@link Sinks.Many#unicast()}. The {@link #handleMessage} callback routes
+	 * via {@code Sinks.many().unicast()}. The {@link #handleMessage} callback routes
 	 * messages to whatever sink is currently active, and naturally completes the sink
 	 * when a {@link ResultMessage} arrives (no {@code takeUntil} operator needed).
 	 * </p>
@@ -361,7 +361,7 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	 * </p>
 	 * <ol>
 	 * <li>{@code Flux.defer()} delays sink creation until subscription</li>
-	 * <li>A fresh {@link Sinks.Many#unicast()} sink is created for this turn</li>
+	 * <li>A fresh {@code Sinks.many().unicast()} sink is created for this turn</li>
 	 * <li>The sink is atomically swapped into {@link #currentTurnSink}</li>
 	 * <li>{@link #handleMessage} routes messages to the active sink</li>
 	 * <li>When {@link ResultMessage} arrives, {@code handleMessage} completes the
