@@ -517,28 +517,9 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 			HookInput input = objectMapper.convertValue(inputMap, HookInput.class);
 			HookOutput output = hookRegistry.executeHook(callbackId, input);
 
-			Map<String, Object> responsePayload = new LinkedHashMap<>();
-			responsePayload.put("continue", output.continueExecution());
-			if (output.decision() != null) {
-				responsePayload.put("decision", output.decision());
-			}
-			if (output.reason() != null) {
-				responsePayload.put("reason", output.reason());
-			}
-			if (output.hookSpecificOutput() != null) {
-				HookOutput.HookSpecificOutput specific = output.hookSpecificOutput();
-				if (specific.permissionDecision() != null) {
-					responsePayload.put("permission_decision", specific.permissionDecision());
-				}
-				if (specific.permissionDecisionReason() != null) {
-					responsePayload.put("permission_decision_reason", specific.permissionDecisionReason());
-				}
-				if (specific.updatedInput() != null) {
-					responsePayload.put("updated_input", specific.updatedInput());
-				}
-			}
-
-			return ControlResponse.success(requestId, responsePayload);
+			// Preserve the protocol's nested fields and omit absent optional controls.
+			// A missing callback must retain the existing error response path.
+			return ControlResponse.success(requestId, Objects.requireNonNull(output, "Hook callback returned no output"));
 		}
 		catch (Exception e) {
 			logger.error("Error executing hook callback", e);

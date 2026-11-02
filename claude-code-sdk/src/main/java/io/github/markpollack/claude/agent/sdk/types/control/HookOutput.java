@@ -25,9 +25,9 @@ import java.util.Map;
  * Output from a hook execution. Sent back to CLI as part of control response.
  *
  * <p>
- * Field naming note: Java uses camelCase but the protocol uses snake_case.
- * Jackson @JsonProperty handles the conversion. Additionally, "continue" and "async" are
- * Java keywords, so we use alternative names that get serialized correctly.
+ * Optional fields are omitted when absent. Hook-specific decisions stay nested under
+ * {@code hookSpecificOutput} with the protocol's camelCase field names. Java alternatives
+ * for {@code continue} and {@code async} are mapped with {@code @JsonProperty}.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record HookOutput(
@@ -60,11 +60,11 @@ public record HookOutput(
 	}
 
 	/**
-	 * Create an async hook output that defers execution.
+	 * Create an asynchronous notification output.
 	 * <p>
-	 * Async hooks allow the hook to defer its decision, letting Claude continue while the
-	 * hook processes in the background. This is useful for long-running validations or
-	 * external service calls.
+	 * An asynchronous output lets Claude continue without a synchronous decision. Do not
+	 * use it to enforce a tool permission decision; return a synchronous PreToolUse
+	 * {@code hookSpecificOutput} for that purpose. Background work remains caller-owned.
 	 * @return an async hook output with default timeout
 	 */
 	public static HookOutput async() {
@@ -72,7 +72,7 @@ public record HookOutput(
 	}
 
 	/**
-	 * Create an async hook output that defers execution with a specified timeout.
+	 * Create an asynchronous notification output with a specified timeout.
 	 * @param timeoutMs timeout in milliseconds for the async operation
 	 * @return an async hook output with the specified timeout
 	 */
