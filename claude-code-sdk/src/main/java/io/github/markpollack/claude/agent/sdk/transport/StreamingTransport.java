@@ -562,19 +562,31 @@ public class StreamingTransport implements AutoCloseable {
 
 		// Add MCP server configuration via temp file (avoids shell escaping issues)
 		if (options.getMcpServers() != null && !options.getMcpServers().isEmpty()) {
+			Path preparedConfig = null;
 			try {
 				Map<String, Object> serversForCli = buildMcpConfigForCli(options.getMcpServers());
 				if (!serversForCli.isEmpty()) {
 					String mcpConfigJson = objectMapper.writeValueAsString(Map.of("mcpServers", serversForCli));
-					this.mcpConfigFile = Files.createTempFile("claude-mcp-", ".json");
-					Files.writeString(this.mcpConfigFile, mcpConfigJson);
+					preparedConfig = Files.createTempFile("claude-mcp-", ".json");
+					Files.writeString(preparedConfig, mcpConfigJson);
+					// Publish ownership only after the complete configuration is written.
+					this.mcpConfigFile = preparedConfig;
 					command.add("--mcp-config");
-					command.add(this.mcpConfigFile.toString());
-					logger.debug("Wrote MCP config to temp file: {}", this.mcpConfigFile);
+					command.add(preparedConfig.toString());
+					logger.debug("Wrote MCP config to temp file: {}", preparedConfig);
 				}
 			}
 			catch (IOException e) {
-				logger.warn("Failed to write MCP config file, skipping --mcp-config flag", e);
+				if (preparedConfig != null) {
+					try {
+						Files.deleteIfExists(preparedConfig);
+					}
+					catch (IOException | SecurityException cleanupFailure) {
+						e.addSuppressed(cleanupFailure);
+					}
+				}
+				// Requested configuration must never silently disappear before launch.
+				throw new TransportException("Failed to prepare required MCP configuration", e);
 			}
 		}
 
