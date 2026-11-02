@@ -115,6 +115,7 @@ class TransportCessationTest {
             assertThat(unsettled.stdout().finished()).isFalse();
             assertThat(unsettled.stdout().eof()).isFalse();
             assertThat(unsettled.closeWorkerFinished()).isFalse();
+            assertThat(transport.getSessionError()).hasMessage("Transport cleanup allowance expired");
             assertThat(unsettled.processes()).allMatch(p -> p.state() == TransportResourceSnapshot.ProcessState.EXITED);
             started = System.nanoTime(); transport.close();
             assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(100));
@@ -177,6 +178,32 @@ class TransportCessationTest {
             assertThat(two.get(9, TimeUnit.SECONDS)).isTrue();
             assertThat(transport.resourceSnapshot().connectionId()).isEqualTo(identity);
             assertThat(transport.resourceSnapshot().observedResourcesTerminated()).isTrue();
+        }
+    }
+
+    @Test
+    void refusedProcessTerminationIsExplicitRatherThanSuccessfulClose() throws Exception {
+        var refusing = org.mockito.Mockito.mock(ProcessHandle.class);
+        org.mockito.Mockito.when(refusing.pid()).thenReturn(Long.MAX_VALUE);
+        org.mockito.Mockito.when(refusing.isAlive()).thenReturn(true);
+        org.mockito.Mockito.when(refusing.descendants()).thenAnswer(call -> java.util.stream.Stream.empty());
+        var info = org.mockito.Mockito.mock(ProcessHandle.Info.class);
+        org.mockito.Mockito.when(info.startInstant()).thenReturn(java.util.Optional.empty());
+        org.mockito.Mockito.when(refusing.info()).thenReturn(info);
+        Path cli = python("(root / 'root.pid').write_text(str(os.getpid()))\nwhile True: time.sleep(1)\n");
+        try (StreamingTransport transport = new StreamingTransport(dir, Duration.ofSeconds(10), cli.toString())) {
+            transport.startSession(null, CLIOptions.builder().build(), p -> {}, null); pid("root.pid");
+            var field = StreamingTransport.class.getDeclaredField("ownedProcesses"); field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            var inventory = (java.util.concurrent.ConcurrentMap<Long, ProcessHandle>) field.get(transport);
+            inventory.put(Long.MAX_VALUE, refusing);
+            transport.close();
+            var receipt = transport.resourceSnapshot();
+            assertThat(receipt.closeWorkerFinished()).isTrue();
+            assertThat(receipt.observedResourcesTerminated()).isFalse();
+            assertThat(receipt.processes()).anyMatch(p -> p.pid() == Long.MAX_VALUE && p.state() == TransportResourceSnapshot.ProcessState.ALIVE);
+            assertThat(receipt.issues()).contains("Observed process exit remains unconfirmed after escalation");
+            org.mockito.Mockito.verify(refusing, org.mockito.Mockito.atLeastOnce()).destroyForcibly();
         }
     }
 

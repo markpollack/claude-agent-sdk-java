@@ -1308,7 +1308,10 @@ public class StreamingTransport implements AutoCloseable {
             try { attempt.finished.await(attempt.remainingNanos(), TimeUnit.NANOSECONDS); }
             catch (InterruptedException e) { interrupted = true; }
         }
-        if (attempt.finished.getCount() != 0) cessationIssues.add("Close allowance expired with cleanup still running");
+        if (attempt.finished.getCount() != 0) {
+            cessationIssues.add("Close allowance expired with cleanup still running");
+            sessionError.compareAndSet(null, new IOException("Transport cleanup allowance expired"));
+        }
         if (interrupted) Thread.currentThread().interrupt();
     }
 
