@@ -27,6 +27,7 @@ import io.github.markpollack.claude.agent.sdk.mcp.McpMessageHandler;
 import io.github.markpollack.claude.agent.sdk.mcp.McpServerConfig;
 import io.github.markpollack.claude.agent.sdk.parsing.ParsedMessage;
 import io.github.markpollack.claude.agent.sdk.transport.StreamingTransport;
+import io.github.markpollack.claude.agent.sdk.transport.TransportResourceSnapshot;
 import io.github.markpollack.claude.agent.sdk.transport.CLIOptions;
 import io.github.markpollack.claude.agent.sdk.types.AssistantMessage;
 import io.github.markpollack.claude.agent.sdk.types.Message;
@@ -98,6 +99,10 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 
 	// Session state
 	private final AtomicBoolean connected = new AtomicBoolean(false);
+
+    private final AtomicBoolean connecting = new AtomicBoolean(false);
+
+    private final Object lifecycleLock = new Object();
 
 	private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -236,10 +241,20 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 				return;
 			}
 
+            if (!connecting.compareAndSet(false, true)) { sink.error(new TransportException("Connection already in progress")); return; }
 			try {
-				// Create transport
+				// Do not lose ownership of a partially acquired, unsettled transport on retry.
+                StreamingTransport previous = transportRef.get();
+                if (previous != null && previous.resourceSnapshot().closeRequested()
+                        && !previous.resourceSnapshot().observedResourcesTerminated()) {
+                    throw new TransportException("Prior transport cleanup remains unconfirmed");
+                }
+                // Create transport
 				StreamingTransport transport = new StreamingTransport(workingDirectory, timeout, claudePath);
-				transportRef.set(transport);
+                synchronized (lifecycleLock) {
+                    if (closed.get()) { transport.close(); throw new TransportException("Client closed during acquisition"); }
+                    transportRef.set(transport);
+                }
 
 				// Create raw message sink for receiveMessages() (low-level access)
 				rawMessageSink = Sinks.many().multicast().onBackpressureBuffer();
@@ -248,7 +263,8 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 				transport.startSession(null, options, this::handleMessage, this::handleControlRequest,
 						this::handleControlResponse);
 
-				connected.set(true);
+				if (closed.get()) throw new TransportException("Client closed during acquisition");
+                connected.set(true);
 
 				// Send initialize request with hook configuration if hooks are registered
 				if (hookRegistry.hasHooks()) {
@@ -272,6 +288,7 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 				cleanup();
 				sink.error(new TransportException("Failed to connect client", e));
 			}
+            finally { connecting.set(false); }
 		}).subscribeOn(Schedulers.boundedElastic());
 	}
 
@@ -479,6 +496,12 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 		return toolPermissionCallback;
 	}
 
+    @Override
+    public java.util.Optional<TransportResourceSnapshot> transportResources() {
+        StreamingTransport current = transportRef.get();
+        return current == null ? java.util.Optional.empty() : java.util.Optional.of(current.resourceSnapshot());
+    }
+
 	@Override
 	public boolean isConnected() {
 		StreamingTransport transport = transportRef.get();
@@ -488,7 +511,9 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	@Override
 	public Mono<Void> close() {
 		return Mono.<Void>fromRunnable(() -> {
-			if (closed.compareAndSet(false, true)) {
+			boolean first;
+            synchronized (lifecycleLock) { first = closed.compareAndSet(false, true); }
+            if (first) {
 				connected.set(false);
 				cleanup();
 				logger.info("Client closed");
@@ -806,7 +831,7 @@ public class DefaultClaudeAsyncClient implements ClaudeAsyncClient {
 	}
 
 	private void cleanup() {
-		StreamingTransport transport = transportRef.getAndSet(null);
+		StreamingTransport transport = transportRef.get();
 		if (transport != null) {
 			try {
 				transport.close();

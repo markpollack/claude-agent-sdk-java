@@ -16,6 +16,8 @@
 
 package io.github.markpollack.claude.agent.sdk;
 
+import io.github.markpollack.claude.agent.sdk.transport.TransportResourceSnapshot;
+
 import io.github.markpollack.claude.agent.sdk.parsing.ParsedMessage;
 import io.github.markpollack.claude.agent.sdk.permission.ToolPermissionCallback;
 import io.github.markpollack.claude.agent.sdk.types.AssistantMessage;
@@ -87,6 +89,16 @@ public interface ClaudeAsyncClient {
 	// ========================================================================
 	// TurnSpec - Response handling for a single turn
 	// ========================================================================
+
+    /**
+     * Returns the latest transport's immutable owned-resource observation, including
+     * after close. Empty means this implementation exposes no transport inventory.
+     * A closed/disconnected facade alone does not establish resource cessation.
+     * @return current resource observation, or empty when no transport is available
+     */
+    default java.util.Optional<TransportResourceSnapshot> transportResources() {
+        return java.util.Optional.empty();
+    }
 
 	/**
 	 * Specification for handling responses from a single conversation turn.

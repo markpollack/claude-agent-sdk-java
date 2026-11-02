@@ -31,6 +31,7 @@ import io.github.markpollack.claude.agent.sdk.streaming.MessageReceiver;
 import io.github.markpollack.claude.agent.sdk.streaming.MessageStreamIterator;
 import io.github.markpollack.claude.agent.sdk.streaming.ResponseBoundedReceiver;
 import io.github.markpollack.claude.agent.sdk.transport.StreamingTransport;
+import io.github.markpollack.claude.agent.sdk.transport.TransportResourceSnapshot;
 import io.github.markpollack.claude.agent.sdk.transport.CLIOptions;
 import io.github.markpollack.claude.agent.sdk.types.AssistantMessage;
 import io.github.markpollack.claude.agent.sdk.types.Message;
@@ -97,6 +98,10 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 
 	// Session state
 	private final AtomicBoolean connected = new AtomicBoolean(false);
+
+    private final AtomicBoolean connecting = new AtomicBoolean(false);
+
+    private final Object lifecycleLock = new Object();
 
 	private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -189,9 +194,20 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 			throw new TransportException("Client is already connected");
 		}
 
+        if (!connecting.compareAndSet(false, true)) throw new TransportException("Connection already in progress");
 		try {
-			// Create transport
-			transport = new StreamingTransport(workingDirectory, timeout, claudePath);
+			// Do not lose ownership of a partially acquired, unsettled transport on retry.
+                StreamingTransport previous = transport;
+                if (previous != null && previous.resourceSnapshot().closeRequested()
+                        && !previous.resourceSnapshot().observedResourcesTerminated()) {
+                    throw new TransportException("Prior transport cleanup remains unconfirmed");
+                }
+                // Create transport
+			StreamingTransport candidate = new StreamingTransport(workingDirectory, timeout, claudePath);
+            synchronized (lifecycleLock) {
+                if (closed.get()) { candidate.close(); throw new TransportException("Client closed during acquisition"); }
+                transport = candidate;
+            }
 
 			// Create message receivers
 			messageIterator = new MessageStreamIterator();
@@ -201,7 +217,8 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 			transport.startSession(null, options, this::handleMessage, this::handleControlRequest,
 					this::handleControlResponse);
 
-			connected.set(true);
+			if (closed.get()) throw new TransportException("Client closed during acquisition");
+            connected.set(true);
 
 			// Send initialize request with hook configuration if hooks are registered
 			if (hookRegistry.hasHooks()) {
@@ -226,6 +243,7 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 			cleanup();
 			throw new TransportException("Failed to connect client", e);
 		}
+        finally { connecting.set(false); }
 	}
 
 	private void sendInitialize() throws ClaudeSDKException {
@@ -394,6 +412,12 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 		return serverInfo.get();
 	}
 
+    @Override
+    public java.util.Optional<TransportResourceSnapshot> transportResources() {
+        StreamingTransport current = transport;
+        return current == null ? java.util.Optional.empty() : java.util.Optional.of(current.resourceSnapshot());
+    }
+
 	@Override
 	public boolean isConnected() {
 		return connected.get() && !closed.get() && transport != null && transport.isRunning();
@@ -406,7 +430,9 @@ public class DefaultClaudeSyncClient implements ClaudeSyncClient {
 
 	@Override
 	public void close() {
-		if (closed.compareAndSet(false, true)) {
+		boolean first;
+        synchronized (lifecycleLock) { first = closed.compareAndSet(false, true); }
+        if (first) {
 			connected.set(false);
 			cleanup();
 			logger.info("Client closed");

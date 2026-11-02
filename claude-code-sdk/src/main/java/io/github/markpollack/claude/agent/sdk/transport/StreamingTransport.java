@@ -49,6 +49,10 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.Comparator;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -141,7 +145,13 @@ public class StreamingTransport implements AutoCloseable {
 	// Scheduler Separation (from MCP SDK pattern)
 	// ============================================================
 
-	private final Scheduler inboundScheduler;
+	private final ExecutorService inboundExecutor;
+
+    private final ExecutorService outboundExecutor;
+
+    private final ExecutorService errorExecutor;
+
+    private final Scheduler inboundScheduler;
 
 	private final Scheduler outboundScheduler;
 
@@ -185,6 +195,32 @@ public class StreamingTransport implements AutoCloseable {
 
 	private volatile CountDownLatch readersFinished = new CountDownLatch(0);
 
+    private static final Duration CLOSE_BUDGET = Duration.ofSeconds(7);
+
+    private final String connectionId = UUID.randomUUID().toString();
+    private final Object acquisitionLock = new Object();
+    private final ConcurrentMap<Long, ProcessHandle> ownedProcesses = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Optional<java.time.Instant>> processStartedAt = new ConcurrentHashMap<>();
+    private final java.util.Set<String> cessationIssues = ConcurrentHashMap.newKeySet();
+    private final AtomicBoolean enumerationSucceeded = new AtomicBoolean(true);
+    private final AtomicReference<CloseAttempt> closeAttempt = new AtomicReference<>();
+    private volatile boolean setupInProgress;
+    private volatile boolean stdoutAcquired;
+    private volatile boolean stderrAcquired;
+    private volatile boolean stdoutFinished = true;
+    private volatile boolean stderrFinished = true;
+    private volatile boolean stdoutEof;
+    private volatile boolean stderrEof;
+    private volatile boolean streamsClosed;
+
+    private static final class CloseAttempt {
+        final long started = System.nanoTime();
+        final CountDownLatch finished = new CountDownLatch(1);
+        long remainingNanos() {
+            return Math.max(0, CLOSE_BUDGET.toNanos() - (System.nanoTime() - started));
+        }
+    }
+
 	// Synchronization for stdin writes (belt-and-suspenders with outbound scheduler)
 	private final Object stdinLock = new Object();
 
@@ -221,13 +257,12 @@ public class StreamingTransport implements AutoCloseable {
 		this.parser = new ControlMessageParser();
 		this.objectMapper = new ObjectMapper();
 
-		// Initialize schedulers with named threads for debugging
-		this.inboundScheduler = Schedulers
-			.fromExecutorService(Executors.newSingleThreadExecutor(r -> new Thread(r, "claude-inbound")), "inbound");
-		this.outboundScheduler = Schedulers
-			.fromExecutorService(Executors.newSingleThreadExecutor(r -> new Thread(r, "claude-outbound")), "outbound");
-		this.errorScheduler = Schedulers
-			.fromExecutorService(Executors.newSingleThreadExecutor(r -> new Thread(r, "claude-error")), "error");
+        this.inboundExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "claude-inbound"));
+        this.outboundExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "claude-outbound"));
+        this.errorExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "claude-error"));
+        this.inboundScheduler = Schedulers.fromExecutorService(inboundExecutor, "inbound");
+        this.outboundScheduler = Schedulers.fromExecutorService(outboundExecutor, "outbound");
+        this.errorScheduler = Schedulers.fromExecutorService(errorExecutor, "error");
 
 		// Initialize sinks with backpressure
 		// Use replay() to buffer messages for late subscribers in multi-turn
@@ -336,7 +371,10 @@ public class StreamingTransport implements AutoCloseable {
 			throw new IllegalStateException("Cannot start session in state: " + getStateName());
 		}
 
+        setupInProgress = true;
 		try {
+            synchronized (acquisitionLock) {
+            if (closeAttempt.get() != null) throw new TransportException("Transport closed during acquisition");
 			// Create parser with buffer size from options (buffer overflow protection)
 			this.parser = new ControlMessageParser(options.getEffectiveMaxBufferSize());
 
@@ -370,7 +408,11 @@ public class StreamingTransport implements AutoCloseable {
 			ProcessBuilder pb = new ProcessBuilder(command);
 			pb.directory(workingDirectory.toFile());
 			pb.environment().putAll(env);
+            if (state.get() != STATE_CONNECTING || closeAttempt.get() != null) {
+                throw new TransportException("Transport closed during acquisition");
+            }
 			process = pb.start();
+            rememberProcess(process.toHandle());
 
 			// Setup streams
 			OutputStream stdin = process.getOutputStream();
@@ -384,16 +426,26 @@ public class StreamingTransport implements AutoCloseable {
 			stdinWriter = new BufferedWriter(new OutputStreamWriter(stdin, StandardCharsets.UTF_8));
 			stdoutReader = new BufferedReader(new InputStreamReader(stdout, StandardCharsets.UTF_8));
 			stderrReader = new BufferedReader(new InputStreamReader(stderr, StandardCharsets.UTF_8));
+            stdoutAcquired = true;
+            stderrAcquired = true;
 			readersFinished = new CountDownLatch(2);
-
-			// Start inbound message processing on dedicated scheduler (MCP pattern)
-			// Using scheduler.schedule() instead of Mono.subscribeOn() for immediate
-			// execution
-			inboundScheduler
-				.schedule(() -> processInboundMessages(messageHandler, controlRequestHandler, controlResponseHandler));
-
-			// Start stderr reader on dedicated scheduler
-			errorScheduler.schedule(this::readStderr);
+            stdoutFinished = false;
+            try {
+                inboundScheduler.schedule(() -> processInboundMessages(messageHandler, controlRequestHandler, controlResponseHandler));
+            }
+            catch (RuntimeException e) {
+                stdoutFinished = true;
+                readersFinished.countDown();
+                readersFinished.countDown();
+                throw e;
+            }
+            stderrFinished = false;
+            try { errorScheduler.schedule(this::readStderr); }
+            catch (RuntimeException e) {
+                stderrFinished = true;
+                readersFinished.countDown();
+                throw e;
+            }
 
 			// Start outbound message processing
 			Disposable outboundDisposable = outboundSink.asFlux()
@@ -413,16 +465,21 @@ public class StreamingTransport implements AutoCloseable {
 				sendUserMessage(prompt, "default");
 			}
 
+            }
 		}
 		catch (Exception e) {
-			// Revert state on failure
-			state.set(STATE_DISCONNECTED);
-			recordSessionError(e);
+            state.compareAndSet(STATE_CONNECTING, STATE_DISCONNECTED);
+            recordSessionError(e);
+            setupInProgress = false;
+            if (process != null || closeAttempt.get() != null) {
+                close();
+            }
 			if (e instanceof ClaudeSDKException) {
 				throw (ClaudeSDKException) e;
 			}
 			throw new TransportException("Failed to start bidirectional session", e);
 		}
+        finally { setupInProgress = false; }
 	}
 
 	/**
@@ -795,8 +852,8 @@ public class StreamingTransport implements AutoCloseable {
 			String line;
 			// Use isClosing flag for clean shutdown (MCP pattern)
 			logger.debug("Starting message processing loop, isClosing={}", isClosing);
-			while ((transportByteObserver != null || !isClosing) && (line = stdoutReader.readLine()) != null) {
-				if (isClosing && transportByteObserver != null) {
+			while ((line = readLine(stdoutReader, true)) != null) {
+				if (isClosing) {
 					// Capture remaining bytes while closing, without dispatching more
 					// protocol work.
 					continue;
@@ -887,7 +944,6 @@ public class StreamingTransport implements AutoCloseable {
 			}
 		}
 		finally {
-			readersFinished.countDown();
 			logger.debug("processInboundMessages finally block, setting isClosing=true");
 			isClosing = true;
 			inboundSink.tryEmitComplete();
@@ -899,6 +955,10 @@ public class StreamingTransport implements AutoCloseable {
 			catch (Exception e) {
 				logger.debug("Error signaling session end to message handler", e);
 			}
+            finally {
+                stdoutFinished = true;
+                readersFinished.countDown();
+            }
 		}
 	}
 
@@ -930,8 +990,8 @@ public class StreamingTransport implements AutoCloseable {
 	private void readStderr() {
 		try {
 			String line;
-			while ((transportByteObserver != null || !isClosing) && (line = stderrReader.readLine()) != null) {
-				if (isClosing && transportByteObserver != null) {
+			while ((line = readLine(stderrReader, false)) != null) {
+				if (isClosing) {
 					continue;
 				}
 				// Use custom handler if provided, otherwise log at warn level
@@ -952,9 +1012,19 @@ public class StreamingTransport implements AutoCloseable {
 			}
 		}
 		finally {
+            stderrFinished = true;
 			readersFinished.countDown();
 		}
 	}
+
+    private String readLine(BufferedReader reader, boolean stdout) throws IOException {
+        String line = reader.readLine();
+        if (line == null) {
+            if (stdout) stdoutEof = true;
+            else stderrEof = true;
+        }
+        return line;
+    }
 
 	private void recordSessionError(Throwable error) {
 		if (transportByteObserver == null) {
@@ -979,18 +1049,6 @@ public class StreamingTransport implements AutoCloseable {
 
 	private boolean awaitObservedReaders(long timeoutNanos) throws InterruptedException {
 		return transportByteObserver == null || readersFinished.await(Math.max(0, timeoutNanos), TimeUnit.NANOSECONDS);
-	}
-
-	private void finishObservedReaders() {
-		try {
-			if (!awaitObservedReaders(TimeUnit.SECONDS.toNanos(5))) {
-				sessionError.compareAndSet(null, new IOException("Timed out draining observed process streams"));
-			}
-		}
-		catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			recordSessionError(e);
-		}
 	}
 
 	// ============================================================
@@ -1208,6 +1266,7 @@ public class StreamingTransport implements AutoCloseable {
 			transitionTo(STATE_CONNECTED, STATE_CLOSING);
 		}
 		if (process != null) {
+            rememberDescendants();
 			process.destroy();
 		}
 	}
@@ -1219,169 +1278,189 @@ public class StreamingTransport implements AutoCloseable {
 	/**
 	 * Initiates graceful shutdown. Returns a Mono that completes when shutdown is done.
 	 */
-	public Mono<Void> closeGracefully() {
-		return Mono.fromRunnable(() -> {
-			// Set isClosing first for immediate visibility to read loops (MCP pattern)
-			isClosing = true;
-			logger.debug("closeGracefully called, setting isClosing=true");
+    public Mono<Void> closeGracefully() {
+        return Mono.<Void>fromRunnable(this::close).subscribeOn(Schedulers.boundedElastic());
+    }
 
-			// State transition to CLOSING
-			int currentState = state.get();
-			if (currentState == STATE_CLOSED || currentState == STATE_CLOSING) {
-				return;
-			}
-			state.set(STATE_CLOSING);
-			logger.debug("Initiating graceful shutdown");
-		}).then(Mono.defer(() -> {
-			// Complete all sinks
-			inboundSink.tryEmitComplete();
-			outboundSink.tryEmitComplete();
+    /**
+     * Starts one close attempt and waits at most its original seven-second allowance.
+     * Subsequent calls do not restart the allowance. Consult {@link #resourceSnapshot()}
+     * for positively observed cessation; return alone is not proof. Cleanup retains
+     * ownership and may finish later if an uncooperative callback or I/O operation returns.
+     */
+    @Override
+    public void close() {
+        CloseAttempt attempt = closeAttempt.get();
+        if (attempt == null) {
+            CloseAttempt candidate = new CloseAttempt();
+            if (closeAttempt.compareAndSet(null, candidate)) {
+                isClosing = true;
+                state.set(STATE_CLOSING);
+                Thread worker = new Thread(() -> closeOwnedResources(candidate), "claude-close-" + connectionId);
+                worker.setDaemon(true);
+                worker.start();
+                attempt = candidate;
+            }
+            else attempt = closeAttempt.get();
+        }
+        boolean interrupted = false;
+        while (attempt.finished.getCount() != 0 && attempt.remainingNanos() > 0) {
+            try { attempt.finished.await(attempt.remainingNanos(), TimeUnit.NANOSECONDS); }
+            catch (InterruptedException e) { interrupted = true; }
+        }
+        if (attempt.finished.getCount() != 0) cessationIssues.add("Close allowance expired with cleanup still running");
+        if (interrupted) Thread.currentThread().interrupt();
+    }
 
-			// Allow time for pending messages
-			return Mono.delay(Duration.ofMillis(100));
-		})).then(Mono.defer(() -> {
-			// Dispose all subscriptions
-			subscriptions.dispose();
+    private void closeOwnedResources(CloseAttempt attempt) {
+        try {
+            synchronized (acquisitionLock) {
+                // Freeze acquisition before terminating processes. No callback or sink
+                // completion is allowed to prevent targeted process teardown.
+                destroyProcessTree(attempt);
+                try { readersFinished.await(attempt.remainingNanos(), TimeUnit.NANOSECONDS); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                inboundScheduler.dispose();
+                outboundScheduler.dispose();
+                errorScheduler.dispose();
+                subscriptions.dispose();
+                closeStreams();
+                cleanupMcpConfig();
+                inboundSink.tryEmitComplete();
+                outboundSink.tryEmitComplete();
+                awaitExecutor(inboundExecutor, attempt);
+                awaitExecutor(outboundExecutor, attempt);
+                awaitExecutor(errorExecutor, attempt);
+                state.set(STATE_CLOSED);
+            }
+        }
+        catch (RuntimeException e) {
+            cessationIssues.add("Cleanup failed: " + e.getClass().getSimpleName());
+            sessionError.compareAndSet(null, e);
+        }
+        finally { attempt.finished.countDown(); }
+    }
 
-			return Mono.empty();
-		})).then(Mono.defer(() -> {
-			// Same ordering as close(): terminate the process tree before closing the
-			// streams, so the bounded destroy is reachable rather than sitting behind
-			// an unbounded reader close.
-			if (process != null) {
-				destroyProcessTree(process);
-			}
+    private void awaitExecutor(ExecutorService executor, CloseAttempt attempt) {
+        try { executor.awaitTermination(attempt.remainingNanos(), TimeUnit.NANOSECONDS); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
 
-			// Drain observed readers after process termination, before closing their
-			// streams.
-			finishObservedReaders();
-			// Close transport resources
-			closeStreams();
-			return Mono.empty();
-		})).then(Mono.<Void>fromRunnable(() -> {
-			// Dispose schedulers
-			inboundScheduler.dispose();
-			outboundScheduler.dispose();
-			errorScheduler.dispose();
+    private void rememberProcess(ProcessHandle handle) {
+        processStartedAt.computeIfAbsent(handle.pid(), pid -> {
+            try { return handle.info().startInstant(); }
+            catch (RuntimeException e) { return Optional.empty(); }
+        });
+        ownedProcesses.putIfAbsent(handle.pid(), handle);
+    }
 
-			state.set(STATE_CLOSED);
-			logger.debug("StreamingTransport closed gracefully");
-		})).subscribeOn(Schedulers.boundedElastic());
-	}
+    private void rememberDescendants() {
+        // Retained handles survive root exit/reparenting. Discovery is an observation,
+        // not a claim of OS containment or of detecting already-detached processes.
+        for (ProcessHandle owner : List.copyOf(ownedProcesses.values())) {
+            try (var descendants = owner.descendants()) {
+                descendants.forEach(this::rememberProcess);
+            }
+            catch (RuntimeException e) {
+                enumerationSucceeded.set(false);
+                cessationIssues.add("Process enumeration failed: " + e.getClass().getSimpleName());
+            }
+        }
+    }
 
-	@Override
-	public void close() {
-		// Synchronous close for AutoCloseable compatibility
-		int currentState = state.get();
-		if (currentState == STATE_CLOSED) {
-			return;
-		}
+    private void destroyProcessTree(CloseAttempt attempt) {
+        if (process == null) return;
+        rememberDescendants();
+        // Descendants first, with their handles retained before the root can disappear.
+        signalProcesses(false, false);
+        long graceEnd = System.nanoTime() + Math.min(TimeUnit.MILLISECONDS.toNanos(250), attempt.remainingNanos());
+        while (System.nanoTime() < graceEnd && anyProcessAlive(false)) sleepBriefly();
+        rememberDescendants();
+        signalProcesses(true, false);
+        signalProcesses(false, true);
+        long rootGraceEnd = System.nanoTime() + Math.min(TimeUnit.MILLISECONDS.toNanos(250), attempt.remainingNanos());
+        while (System.nanoTime() < rootGraceEnd && anyProcessAlive(true)) sleepBriefly();
+        rememberDescendants();
+        signalProcesses(true, false);
+        signalProcesses(true, true);
+        long exitEnd = System.nanoTime() + Math.min(TimeUnit.SECONDS.toNanos(2), attempt.remainingNanos());
+        while (System.nanoTime() < exitEnd && anyProcessAlive(null)) sleepBriefly();
+        if (anyProcessAlive(null)) cessationIssues.add("Observed process exit remains unconfirmed after escalation");
+    }
 
-		// Set isClosing first for immediate visibility to read loops (MCP pattern)
-		isClosing = true;
-		logger.debug("close() called, setting isClosing=true, currentState={}", getStateName(currentState));
-		state.set(STATE_CLOSING);
+    private void signalProcesses(boolean force, boolean root) {
+        for (ProcessHandle handle : List.copyOf(ownedProcesses.values())) {
+            if ((process != null && handle.pid() == process.pid()) != root) continue;
+            try {
+                if (handle.isAlive()) {
+                    if (force) handle.destroyForcibly();
+                    else handle.destroy();
+                }
+            }
+            catch (RuntimeException e) { cessationIssues.add("Process signal failed for pid " + handle.pid()); }
+        }
+    }
 
-		// Complete sinks
-		inboundSink.tryEmitComplete();
-		outboundSink.tryEmitComplete();
+    private boolean anyProcessAlive(Boolean root) {
+        return ownedProcesses.values().stream().filter(p -> root == null || ((p.pid() == process.pid()) == root))
+                .anyMatch(p -> processState(p) != TransportResourceSnapshot.ProcessState.EXITED);
+    }
 
-		// Dispose subscriptions
-		subscriptions.dispose();
+    private void sleepBriefly() {
+        try { Thread.sleep(10); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
 
-		// Terminate the process tree FIRST, then close the streams.
-		//
-		// The order matters and used to be the other way round. destroyProcessTree is
-		// bounded — descendants first, destroy, waitFor(5s), destroyForcibly,
-		// waitFor(2s) — but closing a pipe reader while another thread is blocked
-		// reading it is not bounded at all, so running closeStreams() first meant the
-		// bound never got the chance to apply: an observed close took over three
-		// minutes, and a cancelled session left the CLI alive through a 45s settle and
-		// the following turn. Destroying first gives the blocked reader its EOF, so the
-		// stream closes immediately afterwards.
-		if (process != null) {
-			destroyProcessTree(process);
-		}
+    private TransportResourceSnapshot.ProcessState processState(ProcessHandle handle) {
+        try { return handle.isAlive() ? TransportResourceSnapshot.ProcessState.ALIVE : TransportResourceSnapshot.ProcessState.EXITED; }
+        catch (RuntimeException e) { return TransportResourceSnapshot.ProcessState.UNKNOWN; }
+    }
 
-		// Drain observed readers after process termination, before closing their streams.
-		finishObservedReaders();
-		// Close streams
-		closeStreams();
+    /**
+     * Observes owned resources without initiating cleanup or waiting for callbacks.
+     * @return a detached immutable snapshot; see its inventory-scope limitations
+     */
+    public TransportResourceSnapshot resourceSnapshot() {
+        rememberDescendants();
+        List<TransportResourceSnapshot.OwnedProcess> inventory = ownedProcesses.values().stream().map(p -> {
+            Optional<java.time.Instant> started = processStartedAt.getOrDefault(p.pid(), Optional.empty());
+            return new TransportResourceSnapshot.OwnedProcess(p.pid(), started, process != null && p.pid() == process.pid(), processState(p));
+        }).sorted(Comparator.comparingLong(TransportResourceSnapshot.OwnedProcess::pid)).toList();
+        CloseAttempt attempt = closeAttempt.get();
+        return new TransportResourceSnapshot(connectionId, setupInProgress, attempt != null,
+                attempt != null && attempt.finished.getCount() == 0, CLOSE_BUDGET, inventory,
+                enumerationSucceeded.get(),
+                new TransportResourceSnapshot.StreamStatus(stdoutAcquired, stdoutFinished, stdoutEof),
+                new TransportResourceSnapshot.StreamStatus(stderrAcquired, stderrFinished, stderrEof),
+                inboundExecutor.isTerminated() && outboundExecutor.isTerminated() && errorExecutor.isTerminated(),
+                streamsClosed, mcpConfigFile == null, cessationIssues.stream().sorted().toList());
+    }
 
-		// Clean up MCP config temp file
-		if (mcpConfigFile != null) {
-			try {
-				Files.deleteIfExists(mcpConfigFile);
-				logger.debug("Deleted MCP config temp file: {}", mcpConfigFile);
-			}
-			catch (IOException e) {
-				logger.debug("Failed to delete MCP config temp file: {}", mcpConfigFile, e);
-			}
-			mcpConfigFile = null;
-		}
+    private void closeStreams() {
+        boolean stdinClosed = closeQuietly(stdinWriter);
+        boolean stdoutClosed = closeQuietly(stdoutReader);
+        boolean stderrClosed = closeQuietly(stderrReader);
+        streamsClosed = stdinClosed && stdoutClosed && stderrClosed;
+    }
 
-		// Shutdown schedulers
-		inboundScheduler.dispose();
-		outboundScheduler.dispose();
-		errorScheduler.dispose();
+    private boolean closeQuietly(Closeable closeable) {
+        if (closeable == null) return true;
+        try { closeable.close(); return true; }
+        catch (IOException | RuntimeException e) {
+            cessationIssues.add("Stream close failed: " + e.getClass().getSimpleName());
+            sessionError.compareAndSet(null, e);
+            return false;
+        }
+    }
 
-		state.set(STATE_CLOSED);
-		logger.debug("StreamingTransport closed");
-	}
-
-	/**
-	 * Destroys the CLI process and all its descendant processes. Child processes (e.g.,
-	 * Node.js workers spawned by the CLI) may inherit stdout file descriptors, keeping
-	 * pipes open even after the main process exits. This ensures the entire process tree
-	 * is cleaned up.
-	 */
-	private void destroyProcessTree(Process proc) {
-		// Kill descendants first so they don't hold pipes/resources open
-		try {
-			proc.toHandle().descendants().forEach(ph -> {
-				try {
-					ph.destroy();
-				}
-				catch (Exception e) {
-					logger.debug("Error destroying descendant process (pid={})", ph.pid(), e);
-				}
-			});
-		}
-		catch (Exception e) {
-			logger.debug("Error enumerating descendant processes", e);
-		}
-
-		// Kill the main process
-		proc.destroy();
-		try {
-			if (!proc.waitFor(5, TimeUnit.SECONDS)) {
-				logger.debug("Process did not exit within 5s, destroying forcibly");
-				proc.destroyForcibly();
-				proc.waitFor(2, TimeUnit.SECONDS);
-			}
-		}
-		catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			proc.destroyForcibly();
-		}
-	}
-
-	private void closeStreams() {
-		closeQuietly(stdinWriter);
-		closeQuietly(stdoutReader);
-		closeQuietly(stderrReader);
-	}
-
-	private void closeQuietly(Closeable closeable) {
-		if (closeable != null) {
-			try {
-				closeable.close();
-			}
-			catch (IOException e) {
-				logger.debug("Error closing stream", e);
-			}
-		}
-	}
+    private void cleanupMcpConfig() {
+        if (mcpConfigFile == null) return;
+        try { Files.deleteIfExists(mcpConfigFile); mcpConfigFile = null; }
+        catch (IOException | RuntimeException e) {
+            cessationIssues.add("MCP configuration cleanup failed: " + e.getClass().getSimpleName());
+            sessionError.compareAndSet(null, e);
+        }
+    }
 
 	// ============================================================
 	// Functional Interface

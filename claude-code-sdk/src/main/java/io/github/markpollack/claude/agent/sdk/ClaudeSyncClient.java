@@ -17,6 +17,7 @@
 package io.github.markpollack.claude.agent.sdk;
 
 import io.github.markpollack.claude.agent.sdk.exceptions.ClaudeSDKException;
+import io.github.markpollack.claude.agent.sdk.transport.TransportResourceSnapshot;
 import io.github.markpollack.claude.agent.sdk.parsing.ParsedMessage;
 import io.github.markpollack.claude.agent.sdk.permission.ToolPermissionCallback;
 import io.github.markpollack.claude.agent.sdk.streaming.MessageReceiver;
@@ -63,6 +64,16 @@ import java.util.Map;
  * @see ClaudeAsyncClient
  */
 public interface ClaudeSyncClient extends AutoCloseable {
+
+    /**
+     * Returns the latest transport's immutable owned-resource observation, including
+     * after close. Empty means this implementation exposes no transport inventory.
+     * A closed/disconnected facade alone does not establish resource cessation.
+     * @return current resource observation, or empty when no transport is available
+     */
+    default java.util.Optional<TransportResourceSnapshot> transportResources() {
+        return java.util.Optional.empty();
+    }
 
 	/**
 	 * Connects to the Claude CLI without an initial prompt. The client is ready for
