@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   publish:
-    uses: markpollack/build-tools/.github/workflows/publish-snapshot.yml@35297f1ade5f47c2925d6dab42a7e2d43bd734d0
+    uses: markpollack/build-tools/.github/workflows/publish-snapshot.yml@76a0c8c0d223b62e49619c45e0c0a7b15e1bf3cc
     with:
       java-version: '21'
       # Snapshot verification runs the tests. Publishing an artifact that no build
